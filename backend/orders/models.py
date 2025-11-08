@@ -23,7 +23,7 @@ class Order(models.Model):
     number = models.CharField(max_length=20, unique=True, editable=False)
     customer_name = models.CharField(max_length=255)
     customer_email = models.EmailField(blank=True, null=True)
-    customer_phone = models.CharField(max_length=30)
+    customer_phone = models.CharField(max_length=30, blank=True, null=True)
     customer_address = models.TextField(blank=True, null=True)
     payment_method = models.CharField(
         max_length=20,

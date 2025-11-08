@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ChangeEvent } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import Image from 'next/image';
 import {
   Typography,
@@ -17,13 +17,50 @@ import {
   MenuItem,
   InputAdornment,
   IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
-import { Add, Close, CloudUpload } from '@mui/icons-material';
+import { Add, Close, CloudUpload, Edit, Delete } from '@mui/icons-material';
 import AdminLayout from '@/components/AdminLayout';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import Grid from '@mui/material/GridLegacy';
+import api from '@/lib/axios';
+
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  sku: string;
+  price: string;
+  cost: string;
+  category: number;
+  category_name: string;
+  stock: number;
+  size: string;
+  color: string;
+  brand: string;
+  image: string | null;
+  status: string;
+}
+
+const currency = (value: number | string) =>
+  Number(value).toLocaleString('es-CO', {
+    style: 'currency',
+    currency: 'COP',
+    minimumFractionDigits: 0,
+  });
 
 export default function ProductosPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [openModal, setOpenModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -38,6 +75,23 @@ export default function ProductosPage() {
     brand: '',
   });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get<Product[]>('/products/');
+        setProducts(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setError('No se pudieron cargar los productos.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   const handleOpen = () => setOpenModal(true);
   const handleClose = () => {
@@ -106,6 +160,54 @@ export default function ProductosPage() {
           Nuevo Producto
         </Button>
       </Box>
+
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Alert severity="error">{error}</Alert>
+      ) : (
+        <TableContainer component={Paper} variant="outlined">
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Imagen</TableCell>
+                <TableCell>Nombre</TableCell>
+                <TableCell>SKU</TableCell>
+                <TableCell align="right">Precio</TableCell>
+                <TableCell align="center">Stock</TableCell>
+                <TableCell>Estado</TableCell>
+                <TableCell align="center">Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {products.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell>
+                    <Box sx={{ position: 'relative', width: 40, height: 40, borderRadius: 1, overflow: 'hidden' }}>
+                      {product.image ? (
+                        <Image src="https://via.placeholder.com/40" alt={product.name} fill style={{ objectFit: 'cover' }} />
+                      ) : (
+                        <Box sx={{ bgcolor: 'grey.200', width: '100%', height: '100%' }} />
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell>{product.name}</TableCell>
+                  <TableCell>{product.sku}</TableCell>
+                  <TableCell align="right">{currency(product.price)}</TableCell>
+                  <TableCell align="center">{product.stock}</TableCell>
+                  <TableCell>{product.status}</TableCell>
+                  <TableCell align="center">
+                    <IconButton size="small"><Edit fontSize="small" /></IconButton>
+                    <IconButton size="small" color="error"><Delete fontSize="small" /></IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       {/* Modal de Registro */}
       <Dialog

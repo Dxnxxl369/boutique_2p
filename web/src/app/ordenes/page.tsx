@@ -25,13 +25,16 @@ import {
   Autocomplete,
   Divider,
   Alert,
+  Chip,
+  CircularProgress,
 } from '@mui/material';
-import { Add, Close, Delete } from '@mui/icons-material';
+import { Add, Close, Delete, Visibility } from '@mui/icons-material';
 import AdminLayout from '@/components/AdminLayout';
 import api from '@/lib/axios';
 import { isAxiosError } from 'axios';
 import Grid from '@mui/material/GridLegacy';
 
+// Interfaces
 interface ProductOption {
   id: number;
   name: string;
@@ -72,6 +75,30 @@ interface OrderItemRow {
   total: number;
 }
 
+interface OrderItemDetail {
+  id: number;
+  product: number;
+  product_name: string;
+  sku: string;
+  quantity: number;
+  unit_price: string;
+  total_price: string;
+}
+
+interface Order {
+  id: number;
+  number: string;
+  customer_name: string;
+  customer_email: string | null;
+  customer_phone: string | null;
+  customer_address: string | null;
+  payment_method: string;
+  total_amount: string;
+  status: string;
+  created_at: string;
+  items: OrderItemDetail[];
+}
+
 const paymentOptions = [
   { value: 'cash', label: 'Efectivo' },
   { value: 'card', label: 'Tarjeta' },
@@ -80,14 +107,29 @@ const paymentOptions = [
   { value: 'daviplata', label: 'Daviplata' },
 ];
 
-const currency = (value: number) =>
-  value.toLocaleString('es-CO', {
+const currency = (value: number | string) =>
+  Number(value).toLocaleString('es-CO', {
     style: 'currency',
     currency: 'COP',
     minimumFractionDigits: 0,
   });
 
+const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    });
+};
+
 export default function OrdenesPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  const [errorOrders, setErrorOrders] = useState<string | null>(null);
+
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
   const [openModal, setOpenModal] = useState(false);
   const [formData, setFormData] = useState<OrderFormData>({
     customer: '',
@@ -103,10 +145,39 @@ export default function OrdenesPage() {
   const [quantity, setQuantity] = useState(1);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const fetchOrders = async () => {
+    try {
+      setLoadingOrders(true);
+      const response = await api.get<Order[]>('/orders/');
+      setOrders(response.data);
+      setErrorOrders(null);
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+      setErrorOrders('No se pudieron cargar las órdenes.');
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
   useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const handleViewDetails = (order: Order) => {
+    setSelectedOrder(order);
+    setDetailModalOpen(true);
+  };
+
+  const handleCloseDetails = () => {
+    setDetailModalOpen(false);
+    setSelectedOrder(null);
+  };
+
+  useEffect(() => {
+    if (!openModal) return;
     const fetchProducts = async () => {
       try {
         setLoadingProducts(true);
@@ -121,19 +192,19 @@ export default function OrdenesPage() {
         setProducts(mapped);
       } catch (err: unknown) {
         console.error('Error cargando productos', err);
-        setError('No se pudieron cargar los productos.');
+        setFormError('No se pudieron cargar los productos.');
       } finally {
         setLoadingProducts(false);
       }
     };
 
     fetchProducts();
-  }, []);
+  }, [openModal]);
 
   const handleOpen = () => {
     setOpenModal(true);
     setSuccess(null);
-    setError(null);
+    setFormError(null);
   };
 
   const resetForm = () => {
@@ -161,7 +232,7 @@ export default function OrdenesPage() {
     if (!product) return;
 
     if (quantity > product.stock) {
-      setError(`Stock insuficiente para ${product.name}. Disponible: ${product.stock}.`);
+      setFormError(`Stock insuficiente para ${product.name}. Disponible: ${product.stock}.`);
       return;
     }
 
@@ -178,7 +249,7 @@ export default function OrdenesPage() {
     setOrderItems((prev) => [...prev, newItem]);
     setSelectedProduct(null);
     setQuantity(1);
-    setError(null);
+    setFormError(null);
   };
 
   const handleRemoveItem = (id: string) => {
@@ -192,7 +263,7 @@ export default function OrdenesPage() {
 
   const handleSubmit = async () => {
     if (!formData.customer || !formData.phone || orderItems.length === 0) {
-      setError('Completa los datos del cliente y agrega al menos un producto.');
+      setFormError('Completa los datos del cliente y agrega al menos un producto.');
       return;
     }
 
@@ -214,13 +285,14 @@ export default function OrdenesPage() {
       setLoadingSubmit(true);
       await api.post('/orders/', payload);
       setSuccess('Orden registrada exitosamente.');
-      setError(null);
+      setFormError(null);
       handleClose();
+      fetchOrders(); // Refresh the orders list
     } catch (err: unknown) {
       const message = isAxiosError<OrderErrorResponse>(err)
         ? err.response?.data?.detail ?? err.response?.data?.non_field_errors?.[0]
         : undefined;
-      setError(message ?? 'No se pudo registrar la orden.');
+      setFormError(message ?? 'No se pudo registrar la orden.');
     } finally {
       setLoadingSubmit(false);
     }
@@ -247,15 +319,51 @@ export default function OrdenesPage() {
         </Button>
       </Box>
 
-      {error && !openModal && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
       {success && (
         <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
           {success}
         </Alert>
+      )}
+
+      {loadingOrders ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : errorOrders ? (
+        <Alert severity="error">{errorOrders}</Alert>
+      ) : (
+        <TableContainer component={Paper} variant="outlined">
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Número</TableCell>
+                <TableCell>Cliente</TableCell>
+                <TableCell>Fecha</TableCell>
+                <TableCell align="right">Total</TableCell>
+                <TableCell align="center">Estado</TableCell>
+                <TableCell align="center">Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {orders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell>#{order.number}</TableCell>
+                  <TableCell>{order.customer_name}</TableCell>
+                  <TableCell>{formatDate(order.created_at)}</TableCell>
+                  <TableCell align="right">{currency(order.total_amount)}</TableCell>
+                  <TableCell align="center">
+                    <Chip label={order.status} size="small" />
+                  </TableCell>
+                  <TableCell align="center">
+                    <IconButton size="small" onClick={() => handleViewDetails(order)}>
+                      <Visibility fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       {/* Modal de Nueva Orden */}
@@ -280,9 +388,9 @@ export default function OrdenesPage() {
         </DialogTitle>
 
         <DialogContent dividers sx={{ p: 3 }}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-              {error}
+          {formError && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setFormError(null)}>
+              {formError}
             </Alert>
           )}
           <Grid container spacing={3}>
@@ -498,6 +606,70 @@ export default function OrdenesPage() {
           >
             {loadingSubmit ? 'Guardando...' : 'Registrar Orden'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Order Detail Modal */}
+      <Dialog open={detailModalOpen} onClose={handleCloseDetails} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h5" fontWeight={700}>
+              Detalle de la Orden #{selectedOrder?.number}
+            </Typography>
+            <IconButton onClick={handleCloseDetails} size="small">
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedOrder && (
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="h6" gutterBottom>Info Cliente</Typography>
+                <Typography><strong>Nombre:</strong> {selectedOrder.customer_name}</Typography>
+                <Typography><strong>Email:</strong> {selectedOrder.customer_email || 'N/A'}</Typography>
+                <Typography><strong>Teléfono:</strong> {selectedOrder.customer_phone || 'N/A'}</Typography>
+                <Typography><strong>Dirección:</strong> {selectedOrder.customer_address || 'N/A'}</Typography>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Typography variant="h6" gutterBottom>Info Orden</Typography>
+                <Typography><strong>Fecha:</strong> {formatDate(selectedOrder.created_at)}</Typography>
+                <Typography><strong>Método de Pago:</strong> {selectedOrder.payment_method}</Typography>
+                <Typography><strong>Estado:</strong> {selectedOrder.status}</Typography>
+                <Typography><strong>Total:</strong> {currency(selectedOrder.total_amount)}</Typography>
+              </Grid>
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Artículos</Typography>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Producto</TableCell>
+                        <TableCell>SKU</TableCell>
+                        <TableCell align="center">Cantidad</TableCell>
+                        <TableCell align="right">Precio Unit.</TableCell>
+                        <TableCell align="right">Total</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {selectedOrder.items.map(item => (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.product_name}</TableCell>
+                          <TableCell>{item.sku}</TableCell>
+                          <TableCell align="center">{item.quantity}</TableCell>
+                          <TableCell align="right">{currency(item.unit_price)}</TableCell>
+                          <TableCell align="right">{currency(item.total_price)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDetails}>Cerrar</Button>
         </DialogActions>
       </Dialog>
     </AdminLayout>

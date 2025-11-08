@@ -1,6 +1,6 @@
 const String kApiBaseUrl = String.fromEnvironment(
   'API_URL',
-  defaultValue: 'http://10.0.2.2:8000/api',
+  defaultValue: 'http://192.168.3.37:8000/api',
 );
 
 const String kAuthLoginPath = '/auth/login/';

@@ -32,7 +32,12 @@ class OrderViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "head", "options"]
 
     def get_queryset(self):
+        user = self.request.user
         queryset = super().get_queryset()
+
+        if not user.is_staff_member:
+            queryset = queryset.filter(created_by=user)
+
         status_param = self.request.query_params.get("status")
         if status_param:
             queryset = queryset.filter(status=status_param)
