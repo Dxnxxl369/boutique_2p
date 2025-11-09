@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import MuiThemeProvider from "@/components/MuiThemeProvider";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { NotificationProvider } from "@/contexts/NotificationContext"; // Import NotificationProvider
 import EmotionRegistry from "@/components/EmotionRegistry";
 
 const geistSans = Geist({
@@ -20,6 +21,8 @@ export const metadata: Metadata = {
   description: "Sistema de administración para boutique de ropa femenina",
 };
 
+// ... (rest of the file)
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,7 +34,9 @@ export default function RootLayout({
         <EmotionRegistry>
           <MuiThemeProvider>
             <AuthProvider>
-              {children}
+              <NotificationProvider> {/* Wrap children with NotificationProvider */}
+                {children}
+              </NotificationProvider>
             </AuthProvider>
           </MuiThemeProvider>
         </EmotionRegistry>

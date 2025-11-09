@@ -22,6 +22,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  accessToken: string | null; // Expose accessToken
 }
 
 interface LoginResponse {
@@ -120,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
+    accessToken: typeof window !== 'undefined' ? localStorage.getItem('access_token') : null, // Guard localStorage access
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

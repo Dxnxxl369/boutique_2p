@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/cart_item.dart';
 import '../providers/cart_provider.dart';
+import '../utils/image_utils.dart'; // Import the new utility
 
 class CartItemCard extends StatelessWidget {
   const CartItemCard({super.key, required this.item});
@@ -27,7 +28,7 @@ class CartItemCard extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8.0),
                 child: item.product.image != null
-                    ? Image.network(item.product.image!, fit: BoxFit.cover)
+                    ? Image.network(buildImageUrl(item.product.image!), fit: BoxFit.cover)
                     : Container(
                         color: Colors.grey.shade200,
                         child: const Icon(Icons.image_not_supported),

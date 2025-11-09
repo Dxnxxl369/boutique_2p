@@ -28,7 +28,7 @@ class AuthProvider extends ChangeNotifier {
   String? get accessToken => _accessToken;
   String? get refreshToken => _refreshToken;
 
-  Future<void> initialize() async {
+  Future<void> initialize({String? fcmToken}) async { // Accept fcmToken
     if (_status != AuthStatus.initial) {
       return;
     }
@@ -63,6 +63,18 @@ class AuthProvider extends ChangeNotifier {
         jsonEncode(remoteUser.toJson()),
       );
       _status = AuthStatus.authenticated;
+
+      // If authenticated and FCM token is available, send it to the backend
+      if (fcmToken != null && _accessToken != null) {
+        try {
+          await _service.updateFcmToken(fcmToken, _accessToken!);
+          print('FCM Token sent to backend successfully.');
+        } catch (e) {
+          print('Error sending FCM Token to backend: $e');
+          // Optionally, handle this error more gracefully, e.g., retry
+        }
+      }
+
     } catch (_) {
       await _clearStoredSession(prefs);
       _status = AuthStatus.unauthenticated;
@@ -77,6 +89,7 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _errorMessage = null;
     _setBusy(true);
+    bool success = false; // Initialize a success flag
 
     try {
       final session = await _service.login(
@@ -89,15 +102,21 @@ class AuthProvider extends ChangeNotifier {
       _accessToken = session.accessToken;
       _refreshToken = session.refreshToken;
       notifyListeners();
-      return true;
+      success = true; // Set success to true
     } on AuthException catch (error) {
       _errorMessage = error.message;
       _status = AuthStatus.unauthenticated;
       notifyListeners();
-      return false;
+      success = false; // Set success to false
+    } catch (e) {
+      _errorMessage = 'Ocurrió un error inesperado. Por favor, inténtalo de nuevo.';
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      success = false; // Set success to false
     } finally {
       _setBusy(false);
     }
+    return success; // Return the success flag
   }
 
   Future<bool> register({

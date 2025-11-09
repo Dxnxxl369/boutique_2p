@@ -39,7 +39,7 @@ _default_allowed_hosts = {
     '127.0.0.1',
     '0.0.0.0',
     '10.0.2.2',
-    '192.168.3.37'  # Android emulator loopback
+    '192.168.0.13'  # Android emulator loopback
 }
 ALLOWED_HOSTS = list(_default_allowed_hosts.union(_env_allowed_hosts))
 
@@ -47,6 +47,7 @@ ALLOWED_HOSTS = list(_default_allowed_hosts.union(_env_allowed_hosts))
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -59,10 +60,12 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django_filters',
+    'channels',
     # Local apps
     'users',
     'products',
     'orders',
+    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -152,6 +155,17 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Django Channels
+ASGI_APPLICATION = 'config.asgi.application'
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
+
+# Firebase Admin SDK
+FIREBASE_SERVICE_ACCOUNT_KEY_PATH = os.path.join(BASE_DIR, 'firebase_service_account.json')
+
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
 
@@ -182,7 +196,7 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',    
     'http://127.0.0.1:3000',
-    'http://192.168.3.37'
+    'http://192.168.0.13'
 ]
 
 CORS_ALLOW_CREDENTIALS = True

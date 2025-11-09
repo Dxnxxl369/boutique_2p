@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
+import '../utils/image_utils.dart'; // Import the new utility
 
 class ProductCard extends StatelessWidget {
   const ProductCard({
@@ -29,7 +30,7 @@ class ProductCard extends StatelessWidget {
                   color: Colors.grey.shade200,
                   child: product.image != null
                       ? Image.network(
-                          product.image!,
+                          buildImageUrl(product.image!), // Use the global helper function
                           fit: BoxFit.cover,
                           width: double.infinity,
                           // Loading and error builders can be added for better UX

@@ -52,6 +52,12 @@ class User(AbstractUser):
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    fcm_token = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text='Firebase Cloud Messaging device token for push notifications'
+    )
     
     class Meta:
         ordering = ['-created_at']

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/product.dart';
 import '../../providers/cart_provider.dart';
+import '../../utils/image_utils.dart'; // Import the new utility
 
 class ProductDetailScreen extends StatelessWidget {
   const ProductDetailScreen({super.key, required this.product});
@@ -28,7 +29,7 @@ class ProductDetailScreen extends StatelessWidget {
                 color: Colors.grey.shade200,
                 child: product.image != null
                     ? Image.network(
-                        product.image!,
+                        buildImageUrl(product.image!), // Use the helper function
                         fit: BoxFit.cover,
                       )
                     : const Icon(Icons.image_not_supported, size: 100),

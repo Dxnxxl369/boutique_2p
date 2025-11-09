@@ -94,6 +94,26 @@ class AuthService {
     throw AuthException(_mapErrorMessage(response));
   }
 
+  Future<void> updateFcmToken(String fcmToken, String accessToken) async {
+    final uri = Uri.parse('$kApiBaseUrl$kAuthUpdateFcmTokenPath');
+    final response = await _client.post(
+      uri,
+      headers: <String, String>{
+        ..._defaultHeaders,
+        'Authorization': 'Bearer $accessToken',
+      },
+      body: jsonEncode(<String, String>{
+        'fcm_token': fcmToken,
+      }),
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+
+    throw AuthException(_mapErrorMessage(response));
+  }
+
   AuthSession _handleAuthResponse(
     http.Response response, {
     int expectedStatus = 200,

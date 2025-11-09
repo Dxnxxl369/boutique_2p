@@ -35,6 +35,9 @@ import {
 } from '@mui/icons-material';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationContext'; // Import useNotifications
+import { Badge } from '@mui/material'; // Import Badge
+import { Notifications as NotificationsIcon } from '@mui/icons-material'; // Import NotificationsIcon
 
 const drawerWidth = 260;
 
@@ -48,10 +51,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { notifications, unreadCount, markAsRead } = useNotifications(); // Use notifications context
   
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopOpen, setDesktopOpen] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null); // For notification menu
 
   const handleDrawerToggle = () => {
     if (isMobile) {
@@ -63,6 +68,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
+  };
+
+  const handleNotificationMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setNotificationAnchorEl(event.currentTarget);
+  };
+
+  const handleCloseNotificationMenu = () => {
+    setNotificationAnchorEl(null);
   };
 
   const handleClose = () => {
@@ -203,6 +216,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
             {menuItems.find(item => item.path === pathname)?.text || 'Dashboard'}
           </Typography>
+          {/* Notification Icon */}
+          <IconButton
+            size="large"
+            aria-label="show new notifications"
+            color="inherit"
+            onClick={handleNotificationMenu}
+            sx={{ mr: 1 }} // Add some margin
+          >
+            <Badge badgeContent={unreadCount} color="error">
+              <NotificationsIcon />
+            </Badge>
+          </IconButton>
+
+          {/* User Profile Icon */}
           <IconButton
             size="large"
             onClick={handleMenu}
@@ -244,6 +271,62 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <ExitToApp fontSize="small" />
               </ListItemIcon>
               Cerrar Sesión
+            </MenuItem>
+          </Menu>
+
+          {/* Notification Menu */}
+          <Menu
+            anchorEl={notificationAnchorEl}
+            open={Boolean(notificationAnchorEl)}
+            onClose={handleCloseNotificationMenu}
+            PaperProps={{
+              elevation: 3,
+              sx: {
+                mt: 1.5,
+                minWidth: 300, // Wider for notifications
+                maxHeight: 400, // Scrollable if many notifications
+              }
+            }}
+          >
+            <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="h6" fontWeight={600}>
+                Notificaciones ({unreadCount})
+              </Typography>
+            </Box>
+            <List sx={{ maxHeight: 300, overflow: 'auto' }}>
+              {notifications.length === 0 ? (
+                <MenuItem disabled>No hay notificaciones</MenuItem>
+              ) : (
+                notifications.map((notification) => (
+                  <MenuItem
+                    key={notification.id}
+                    onClick={() => {
+                      markAsRead(notification.id);
+                      // Optionally navigate or show details
+                      handleCloseNotificationMenu();
+                    }}
+                    sx={{
+                      py: 1.5,
+                      bgcolor: notification.is_read ? 'transparent' : 'action.hover',
+                      '&:hover': {
+                        bgcolor: notification.is_read ? 'action.hover' : 'action.selected',
+                      }
+                    }}
+                  >
+                    <ListItemText
+                      primary={notification.message}
+                      secondary={new Date(notification.created_at).toLocaleString()}
+                      primaryTypographyProps={{ fontWeight: notification.is_read ? 400 : 600 }}
+                    />
+                  </MenuItem>
+                ))
+              )}
+            </List>
+            <Divider />
+            <MenuItem onClick={() => { /* Implement clear all or view all */ handleCloseNotificationMenu(); }} sx={{ py: 1.5 }}>
+              <Typography variant="body2" color="primary" textAlign="center" width="100%">
+                Ver todas las notificaciones
+              </Typography>
             </MenuItem>
           </Menu>
         </Toolbar>
