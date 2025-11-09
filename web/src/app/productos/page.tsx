@@ -134,10 +134,49 @@ export default function ProductosPage() {
     }
   };
 
-  const handleSubmit = () => {
-    // TODO: Implementar guardado con API
-    console.log('Producto:', formData);
-    handleClose();
+  const handleSubmit = async () => {
+    try {
+      // Create a FormData object to handle file uploads
+      const productData = new FormData();
+      
+      // Append all form fields
+      Object.entries(formData).forEach(([key, value]) => {
+        if (value) { // only append if value is not empty
+          if (key === 'stock') {
+            productData.append(key, parseInt(value, 10).toString());
+          } else if (key === 'price' || key === 'cost') {
+            productData.append(key, parseFloat(value).toString());
+          } else if (key === 'category') {
+            productData.append(key, parseInt(value, 10).toString());
+          } else {
+            productData.append(key, value);
+          }
+        }
+      });
+
+      // Append the image file if it exists
+      const imageInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      if (imageInput?.files?.[0]) {
+        productData.append('image', imageInput.files[0]);
+      }
+
+      // The browser will automatically set the correct 'Content-Type' for FormData.
+      await api.post('/products/', productData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      // Refetch products to show the new one
+      const response = await api.get<Product[]>('/products/');
+      setProducts(response.data);
+
+      handleClose();
+    } catch (err: any) {
+      console.error('Error creating product:', err);
+      console.log(err.response);
+      setError('No se pudo crear el producto. Por favor, intente de nuevo.');
+    }
   };
 
   return (
@@ -382,12 +421,12 @@ export default function ProductosPage() {
                   onChange={handleChange}
                   label="Categoría"
                 >
-                  <MenuItem value="vestidos">Vestidos</MenuItem>
-                  <MenuItem value="blusas">Blusas</MenuItem>
-                  <MenuItem value="pantalones">Pantalones</MenuItem>
-                  <MenuItem value="faldas">Faldas</MenuItem>
-                  <MenuItem value="accesorios">Accesorios</MenuItem>
-                  <MenuItem value="zapatos">Zapatos</MenuItem>
+                  <MenuItem value="1">Vestidos</MenuItem>
+                  <MenuItem value="2">Blusas</MenuItem>
+                  <MenuItem value="3">Pantalones</MenuItem>
+                  <MenuItem value="4">Faldas</MenuItem>
+                  <MenuItem value="5">Accesorios</MenuItem>
+                  <MenuItem value="6">Zapatos</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

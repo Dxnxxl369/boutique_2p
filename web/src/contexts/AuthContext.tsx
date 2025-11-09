@@ -10,7 +10,7 @@ interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'vendedor' | 'bodeguero' | 'cajero' | 'user';
   phone?: string;
   is_active: boolean;
 }

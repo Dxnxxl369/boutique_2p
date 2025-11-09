@@ -39,7 +39,8 @@ _default_allowed_hosts = {
     '127.0.0.1',
     '0.0.0.0',
     '10.0.2.2',
-    '192.168.3.37'  # Android emulator loopback
+    '192.168.100.7'  # Android emulator loopback
+
 }
 ALLOWED_HOSTS = list(_default_allowed_hosts.union(_env_allowed_hosts))
 
@@ -104,7 +105,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DB_NAME', 'boutique_bd'),
         'USER': os.getenv('DB_USER', 'postgres'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'admin123'),
+        'PASSWORD': os.getenv('DB_PASSWORD', '12345'),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '5432'),
     }
@@ -147,6 +148,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media files (User-uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -182,7 +187,9 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',    
     'http://127.0.0.1:3000',
-    'http://192.168.3.37'
+    'http://192.168.3.37',
+    'http://192.168.100.7'
+
 ]
 
 CORS_ALLOW_CREDENTIALS = True
