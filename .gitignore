@@ -22,6 +22,8 @@ backend/db.sqlite3
 backend/db.sqlite3-journal
 backend/media/
 backend/staticfiles/
+backend/firebase_service_account.json
+
 
 # ========================
 # Node.js / Next.js (web)
