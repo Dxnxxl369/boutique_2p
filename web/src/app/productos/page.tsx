@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import Image from 'next/image';
 import {
   Typography,
@@ -26,12 +26,16 @@ import {
   Paper,
   CircularProgress,
   Alert,
+  Snackbar,
+  DialogContentText,
 } from '@mui/material';
 import { Add, Close, CloudUpload, Edit, Delete } from '@mui/icons-material';
 import AdminLayout from '@/components/AdminLayout';
 import type { SelectChangeEvent } from '@mui/material/Select';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 import api from '@/lib/axios';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSearchParams } from 'next/navigation'; // Import useSearchParams
 
 interface Product {
   id: number;
@@ -47,7 +51,9 @@ interface Product {
   color: string;
   brand: string;
   image: string | null;
-  status: string;
+  status: 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
 }
 
 interface Category {
@@ -65,13 +71,15 @@ const currency = (value: number | string) =>
   });
 
 export default function ProductosPage() {
+  const { accessToken } = useAuth();
+  const searchParams = useSearchParams(); // Initialize useSearchParams
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openModal, setOpenModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formAlert, setFormAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -83,34 +91,89 @@ export default function ProductosPage() {
     size: '',
     color: '',
     brand: '',
+    status: 'active',
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<number | null>(null);
+
+  const fetchData = useCallback(async () => {
+    if (!accessToken) return;
+    try {
+      setLoading(true);
+      const lowStockParam = searchParams.get('low_stock'); // Read low_stock parameter
+      const productApiUrl = lowStockParam === 'true' ? '/products/?low_stock=true' : '/products/';
+
+      const [productsResponse, categoriesResponse] = await Promise.all([
+        api.get<Product[]>(productApiUrl, { // Use productApiUrl
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+        api.get<Category[]>('/categories/', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }),
+      ]);
+      setProducts(productsResponse.data);
+      setCategories(categoriesResponse.data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('No se pudieron cargar los datos iniciales.');
+      setSnackbarMessage('Error al cargar los datos iniciales.');
+      setSnackbarOpen(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken, searchParams]); // Add searchParams to dependencies
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [productsResponse, categoriesResponse] = await Promise.all([
-          api.get<Product[]>('/products/'),
-          api.get<Category[]>('/categories/'),
-        ]);
-        setProducts(productsResponse.data);
-        setCategories(categoriesResponse.data);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('No se pudieron cargar los datos iniciales.');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
-  }, []);
+  }, [fetchData]);
 
-  const handleOpen = () => setOpenModal(true);
+  const handleOpen = (product?: Product) => {
+    if (product) {
+      setEditingProduct(product);
+      setFormData({
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        cost: product.cost || '',
+        sku: product.sku,
+        category: product.category ? String(product.category) : '',
+        stock: String(product.stock),
+        size: product.size,
+        color: product.color,
+        brand: product.brand,
+        status: product.status,
+      });
+      setImagePreview(getImageUrl(product.image));
+    } else {
+      setEditingProduct(null);
+      setFormData({
+        name: '',
+        description: '',
+        price: '',
+        cost: '',
+        sku: '',
+        category: '',
+        stock: '',
+        size: '',
+        color: '',
+        brand: '',
+        status: 'active',
+      });
+      setImagePreview(null);
+    }
+    setImageFile(null); // Clear file input on open
+    setSnackbarOpen(false); // Close any open snackbar
+    setOpenModal(true);
+  };
+
   const handleClose = () => {
     setOpenModal(false);
+    setEditingProduct(null);
     setFormData({
       name: '',
       description: '',
@@ -122,10 +185,10 @@ export default function ProductosPage() {
       size: '',
       color: '',
       brand: '',
+      status: 'active',
     });
     setImageFile(null);
     setImagePreview(null);
-    setFormAlert(null);
   };
 
   const handleChange = (
@@ -153,8 +216,9 @@ export default function ProductosPage() {
   };
 
   const handleSubmit = async () => {
+    if (!accessToken) return;
     setIsSubmitting(true);
-    setFormAlert(null);
+    setSnackbarOpen(false);
 
     const productData = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
@@ -165,34 +229,76 @@ export default function ProductosPage() {
 
     if (imageFile) {
       productData.append('image', imageFile);
+    } else if (editingProduct && !imagePreview) {
+      // If editing and image was removed, send a signal to clear it on backend
+      // This might require backend adjustment to handle 'null' or specific string for image clear
+      // For now, we'll just not send the 'image' field if no new file and no preview
+      // A more robust solution would be to send a specific flag or null value
     }
 
     try {
-      const response = await api.post<Product>('/products/', productData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      if (editingProduct) {
+        await api.patch(`/products/${editingProduct.id}/`, productData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        setSnackbarMessage('Producto actualizado exitosamente.');
+      } else {
+        await api.post<Product>('/products/', productData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        setSnackbarMessage('Producto creado exitosamente.');
+      }
 
-      setProducts((prev) => [response.data, ...prev]);
-      setFormAlert({ type: 'success', message: '¡Producto agregado con éxito!' });
-      setTimeout(() => {
-        handleClose();
-      }, 1500);
+      setSnackbarOpen(true);
+      fetchData();
+      handleClose();
     } catch (err: any) {
-      console.error('Error creating product:', err);
+      console.error('Error saving product:', err);
       const errorData = err.response?.data;
       let errorMessage = 'Ocurrió un error inesperado.';
       if (errorData) {
-        // Convert error object to a more readable string
         errorMessage = Object.entries(errorData)
           .map(([key, value]) => `${key}: ${(value as string[]).join(', ')}`)
           .join('; ');
       }
-      setFormAlert({ type: 'error', message: `Error: ${errorMessage}` });
+      setSnackbarMessage(`Error: ${errorMessage}`);
+      setSnackbarOpen(true);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDeleteConfirm = (id: number) => {
+    setProductToDelete(id);
+    setConfirmDeleteOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!accessToken || productToDelete === null) return;
+    try {
+      await api.delete(`/products/${productToDelete}/`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setSnackbarMessage('Producto eliminado exitosamente.');
+      setSnackbarOpen(true);
+      fetchData();
+      setConfirmDeleteOpen(false);
+      setProductToDelete(null);
+    } catch (err) {
+      console.error('Error deleting product:', err);
+      setSnackbarMessage('Error al eliminar el producto.');
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
   };
 
   const getImageUrl = (imagePath: string | null): string => {
@@ -234,7 +340,7 @@ export default function ProductosPage() {
         <Button
           variant="contained"
           startIcon={<Add />}
-          onClick={handleOpen}
+          onClick={() => handleOpen()}
           sx={{ borderRadius: 2, px: 3 }}
         >
           Nuevo Producto
@@ -248,44 +354,66 @@ export default function ProductosPage() {
       ) : error ? (
         <Alert severity="error">{error}</Alert>
       ) : (
-        <TableContainer component={Paper} variant="outlined">
+        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
           <Table>
-            <TableHead>
+            <TableHead sx={{ backgroundColor: (theme) => theme.palette.grey[100] }}>
               <TableRow>
-                <TableCell>Imagen</TableCell>
-                <TableCell>Nombre</TableCell>
-                <TableCell>SKU</TableCell>
-                <TableCell align="right">Precio</TableCell>
-                <TableCell align="center">Stock</TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell align="center">Acciones</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Imagen</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>SKU</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }} align="right">Precio</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }} align="center">Stock</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Categoría</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }} align="center">Acciones</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    <Box sx={{ position: 'relative', width: 40, height: 40, borderRadius: 1, overflow: 'hidden' }}>
-                      <Image src={getImageUrl(product.image)} alt={product.name} fill style={{ objectFit: 'cover' }} />
-                    </Box>
-                  </TableCell>
-                  <TableCell>{product.name}</TableCell>
-                  <TableCell>{product.sku}</TableCell>
-                  <TableCell align="right">{currency(product.price)}</TableCell>
-                  <TableCell align="center">{product.stock}</TableCell>
-                  <TableCell>{product.status}</TableCell>
-                  <TableCell align="center">
-                    <IconButton size="small"><Edit fontSize="small" /></IconButton>
-                    <IconButton size="small" color="error"><Delete fontSize="small" /></IconButton>
+              {products.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center">
+                    No hay productos disponibles.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                products.map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <Box sx={{ position: 'relative', width: 40, height: 40, borderRadius: 1, overflow: 'hidden' }}>
+                        <Image src={getImageUrl(product.image)} alt={product.name} fill style={{ objectFit: 'cover' }} />
+                      </Box>
+                    </TableCell>
+                    <TableCell>{product.name}</TableCell>
+                    <TableCell>{product.sku}</TableCell>
+                    <TableCell align="right">{currency(product.price)}</TableCell>
+                    <TableCell align="center">{product.stock}</TableCell>
+                    <TableCell>{product.category_name}</TableCell>
+                    <TableCell>{product.status === 'active' ? 'Activo' : 'Inactivo'}</TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => handleOpen(product)}
+                      >
+                        <Edit fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteConfirm(product.id)}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
       )}
 
-      {/* Modal de Registro */}
+      {/* Modal de Creación/Edición */}
       <Dialog
         open={openModal}
         onClose={handleClose}
@@ -298,7 +426,7 @@ export default function ProductosPage() {
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h5" fontWeight={700}>
-              Registrar Nuevo Producto
+              {editingProduct ? 'Editar Producto' : 'Registrar Nuevo Producto'}
             </Typography>
             <IconButton onClick={handleClose} size="small">
               <Close />
@@ -307,11 +435,6 @@ export default function ProductosPage() {
         </DialogTitle>
 
         <DialogContent dividers sx={{ p: 3 }}>
-          {formAlert && (
-            <Alert severity={formAlert.type} sx={{ mb: 2 }}>
-              {formAlert.message}
-            </Alert>
-          )}
           <Grid container spacing={3}>
             {/* Imagen del Producto */}
             <Grid item xs={12}>
@@ -497,6 +620,7 @@ export default function ProductosPage() {
                   onChange={handleChange}
                   label="Talla"
                 >
+                  <MenuItem value="">Ninguna</MenuItem>
                   <MenuItem value="XS">XS</MenuItem>
                   <MenuItem value="S">S</MenuItem>
                   <MenuItem value="M">M</MenuItem>
@@ -519,8 +643,8 @@ export default function ProductosPage() {
               />
             </Grid>
 
-            {/* Marca */}
-            <Grid item xs={12}>
+            {/* Marca y Estado */}
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Marca"
@@ -529,6 +653,21 @@ export default function ProductosPage() {
                 onChange={handleChange}
                 placeholder="Ej: Zara, H&M"
               />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Estado</InputLabel>
+                <Select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  label="Estado"
+                  required
+                >
+                  <MenuItem value="active">Activo</MenuItem>
+                  <MenuItem value="inactive">Inactivo</MenuItem>
+                </Select>
+              </FormControl>
             </Grid>
           </Grid>
         </DialogContent>
@@ -548,11 +687,46 @@ export default function ProductosPage() {
             sx={{ borderRadius: 2, px: 3 }}
             disabled={isSubmitting}
           >
-            {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Registrar Producto'}
+            {isSubmitting ? <CircularProgress size={24} color="inherit" /> : (editingProduct ? 'Guardar Cambios' : 'Registrar Producto')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar para mensajes de éxito/error */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={snackbarMessage}
+        action={
+          <IconButton size="small" aria-label="close" color="inherit" onClick={handleSnackbarClose}>
+            <Close fontSize="small" />
+          </IconButton>
+        }
+      />
+
+      {/* Diálogo de Confirmación de Eliminación */}
+      <Dialog
+        open={confirmDeleteOpen}
+        onClose={() => setConfirmDeleteOpen(false)}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+      >
+        <DialogTitle id="alert-dialog-title">{"Confirmar Eliminación"}</DialogTitle>
+        <DialogContent>
+          <DialogContentText id="alert-dialog-description">
+            ¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDeleteOpen(false)}>Cancelar</Button>
+          <Button onClick={handleDelete} color="error" autoFocus>
+            Eliminar
           </Button>
         </DialogActions>
       </Dialog>
     </AdminLayout>
   );
 }
+
 

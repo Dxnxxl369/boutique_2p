@@ -65,3 +65,12 @@ class InventoryMovementSerializer(serializers.ModelSerializer):
         validated_data['stock_after'] = product.stock
         
         return super().create(validated_data)
+
+
+class ProductSalesReportSerializer(serializers.ModelSerializer):
+    total_units_sold = serializers.IntegerField(read_only=True)
+    total_revenue = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'sku', 'stock', 'total_units_sold', 'total_revenue']

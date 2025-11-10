@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import {
   Typography,
   Box,
@@ -18,7 +18,11 @@ import {
   Card,
   CardContent,
   Chip,
+  CircularProgress,
+  Snackbar,
 } from '@mui/material';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import {
   Add,
   Close,
@@ -28,10 +32,10 @@ import {
   Warning,
 } from '@mui/icons-material';
 import AdminLayout from '@/components/AdminLayout';
-import api from '@/lib/api';
+import api from '@/lib/axios';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import { isAxiosError } from 'axios';
-import Grid from '@mui/material/GridLegacy';
+import Grid from '@mui/material/Grid';
 
 interface Product {
   id: number;
@@ -51,9 +55,13 @@ interface MovementFormData {
 }
 
 export default function InventarioPage() {
+  const { accessToken } = useAuth();
+  const router = useRouter(); // Initialize useRouter
   const [openModal, setOpenModal] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(true); // Separate loading for products list
+  const [loadingMovement, setLoadingMovement] = useState(false); // Loading for movement submission
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<MovementFormData>({
     product: '',
     movementType: 'entrada',
@@ -61,19 +69,33 @@ export default function InventarioPage() {
     reason: '',
     notes: '',
   });
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  const loadProducts = useCallback(async () => {
+    if (!accessToken) return;
+    setLoadingProducts(true);
+    setError(null);
+    try {
+      const response = await api.get<Product[]>('/products/', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      setProducts(response.data);
+    } catch (err) {
+      console.error('Error loading products:', err);
+      setError('Error al cargar los productos.');
+      setSnackbarMessage('Error al cargar los productos.');
+      setSnackbarOpen(true);
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, [accessToken]);
 
   useEffect(() => {
     loadProducts();
-  }, []);
-
-  const loadProducts = async () => {
-    try {
-      const response = await api.get<Product[]>('/products/');
-      setProducts(response.data);
-    } catch (error) {
-      console.error('Error loading products:', error);
-    }
-  };
+  }, [loadProducts]);
 
   const handleOpen = () => setOpenModal(true);
   const handleClose = () => {
@@ -100,32 +122,44 @@ export default function InventarioPage() {
   };
 
   const handleSubmit = async () => {
+    if (!accessToken) return;
     try {
-      setLoading(true);
+      setLoadingMovement(true);
       await api.post('/inventory-movements/', {
         product: Number.parseInt(formData.product, 10),
         movement_type: formData.movementType,
         quantity: Number.parseInt(formData.quantity, 10),
         reason: formData.reason,
         notes: formData.notes,
+      }, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
       
-      // Recargar productos para actualizar el stock
-      await loadProducts();
+      setSnackbarMessage('Movimiento registrado exitosamente.');
+      setSnackbarOpen(true);
+      await loadProducts(); // Recargar productos para actualizar el stock
       handleClose();
       
-      // Aquí podrías agregar una notificación de éxito
-      alert('Movimiento registrado exitosamente');
     } catch (error: unknown) {
       console.error('Error al registrar movimiento:', error);
       const message = isAxiosError(error)
         ? (error.response?.data as { message?: string })?.message ?? 'Error al registrar el movimiento'
         : 'Error al registrar el movimiento';
-      alert(message);
+      setSnackbarMessage(message);
+      setSnackbarOpen(true);
     } finally {
-      setLoading(false);
+      setLoadingMovement(false);
     }
   };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+  };
+
+  const totalProducts = products.length;
+  const lowStockProducts = products.filter(product => product.stock < 10).length;
 
   return (
     <AdminLayout>
@@ -151,7 +185,7 @@ export default function InventarioPage() {
       {/* Resumen de Inventario */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{ cursor: 'pointer' }} onClick={() => router.push('/productos')}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Box
@@ -169,7 +203,7 @@ export default function InventarioPage() {
                 </Box>
                 <Box>
                   <Typography variant="h4" fontWeight={700}>
-                    0
+                    {loadingProducts ? <CircularProgress size={24} /> : totalProducts}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Total Productos
@@ -181,7 +215,7 @@ export default function InventarioPage() {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{ cursor: 'pointer' }} onClick={() => router.push('/movimientos-inventario?movement_type=entrada')}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Box
@@ -211,7 +245,7 @@ export default function InventarioPage() {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{ cursor: 'pointer' }} onClick={() => router.push('/movimientos-inventario?movement_type=salida')}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Box
@@ -241,7 +275,7 @@ export default function InventarioPage() {
         </Grid>
 
         <Grid item xs={12} sm={6} md={3}>
-          <Card>
+          <Card sx={{ cursor: 'pointer' }} onClick={() => router.push('/productos?low_stock=true')}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Box
@@ -259,7 +293,7 @@ export default function InventarioPage() {
                 </Box>
                 <Box>
                   <Typography variant="h4" fontWeight={700}>
-                    0
+                    {loadingProducts ? <CircularProgress size={24} /> : lowStockProducts}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Stock Bajo
@@ -569,7 +603,7 @@ export default function InventarioPage() {
             onClick={handleClose}
             variant="outlined"
             size="large"
-            disabled={loading}
+            disabled={loadingMovement}
             sx={{ 
               borderRadius: 2, 
               px: 4,
@@ -583,7 +617,7 @@ export default function InventarioPage() {
             onClick={handleSubmit}
             variant="contained"
             size="large"
-            disabled={loading || !formData.product || !formData.quantity || !formData.reason}
+            disabled={loadingMovement || !formData.product || !formData.quantity || !formData.reason}
             sx={{ 
               borderRadius: 2, 
               px: 4,
@@ -592,10 +626,22 @@ export default function InventarioPage() {
               boxShadow: 3,
             }}
           >
-            {loading ? 'Registrando...' : 'Registrar Movimiento'}
+            {loadingMovement ? 'Registrando...' : 'Registrar Movimiento'}
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Snackbar para mensajes de éxito/error */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={snackbarMessage}
+        action={
+          <IconButton size="small" aria-label="close" color="inherit" onClick={handleSnackbarClose}>
+            <Close fontSize="small" />
+          </IconButton>
+        }
+      />
     </AdminLayout>
   );
 }

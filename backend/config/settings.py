@@ -39,7 +39,8 @@ _default_allowed_hosts = {
     '127.0.0.1',
     '0.0.0.0',
     '10.0.2.2',
-    '192.168.3.37'
+    '192.168.3.37',
+    '192.168.0.13'
     
 }
 ALLOWED_HOSTS = list(_default_allowed_hosts.union(_env_allowed_hosts))
@@ -197,7 +198,7 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',    
     'http://127.0.0.1:3000',
-    'http://192.168.0.13',
+    'http://192.168.0.13:8000',
     'http://192.168.3.37:8000'
 ]
 

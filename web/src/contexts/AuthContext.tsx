@@ -47,23 +47,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const checkAuth = async () => {
-    console.log('Checking auth...');
+    console.log('AuthContext: Checking auth...');
     try {
       const token = localStorage.getItem('access_token');
-      console.log('Token:', token);
+      console.log('AuthContext: Token from localStorage:', token);
       if (token) {
-        console.log('Fetching user...');
+        console.log('AuthContext: Fetching user with token...');
         const response = await api.get('/auth/me/');
-        console.log('User fetched:', response.data);
+        console.log('AuthContext: User fetched:', response.data);
         setUser(response.data);
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('AuthContext: Auth check failed:', error);
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       setUser(null);
     } finally {
-      console.log('Finished checking auth.');
+      console.log('AuthContext: Finished checking auth.');
       setLoading(false);
     }
   };
@@ -77,9 +77,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const { access, refresh, user: userData } = response.data;
 
+      console.log('AuthContext: Login successful. Access token received:', access);
+
       // Store in localStorage
       localStorage.setItem('access_token', access);
-      localStorage.setItem('refresh_token', refresh);
+      localStorage.setItem('refresh_token', refresh); // Corrected: should be set, not removed
       
       // Also store in cookies for middleware
       document.cookie = `access_token=${access}; path=/; max-age=${60 * 60}`; // 1 hour

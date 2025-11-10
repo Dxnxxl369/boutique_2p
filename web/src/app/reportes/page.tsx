@@ -15,6 +15,7 @@ import {
   Tab,
   Alert,
   CircularProgress,
+  Button, // Added Button import
 } from '@mui/material';
 import {
   BarChart,
@@ -293,6 +294,37 @@ export default function ReportesPage() {
     return null;
   }
 
+  const handleExport = async (format: 'excel' | 'pdf') => {
+    if (!user || !isAdmin) {
+      setError('No autorizado para exportar reportes.');
+      return;
+    }
+    try {
+      const endpoint = format === 'excel' ? '/orders/reports-excel/' : '/orders/reports-pdf/';
+      const response = await api.get(endpoint, {
+        headers: {
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+        responseType: 'blob', // Important for file downloads
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `reporte_ventas.${format === 'excel' ? 'xlsx' : 'pdf'}`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(`Error exporting to ${format}:`, err);
+      const message = isAxiosError<ReportsErrorResponse>(err)
+        ? err.response?.data?.detail ?? err.response?.data?.message
+        : undefined;
+      setError(message ?? `No fue posible exportar el reporte a ${format}.`);
+    }
+  };
+
   return (
     <AdminLayout>
       <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -304,19 +336,27 @@ export default function ReportesPage() {
             Análisis detallado de ventas y rendimiento
           </Typography>
         </Box>
-        <FormControl sx={{ minWidth: 180 }}>
-          <InputLabel>Período</InputLabel>
-          <Select
-            value={period}
-            label="Período"
-            onChange={(e) => setPeriod(e.target.value)}
-          >
-            <MenuItem value="week">Esta Semana</MenuItem>
-            <MenuItem value="month">Este Mes</MenuItem>
-            <MenuItem value="year">Este Año</MenuItem>
-            <MenuItem value="custom">Personalizado</MenuItem>
-          </Select>
-        </FormControl>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button variant="outlined" onClick={() => handleExport('excel')}>
+            Exportar a Excel
+          </Button>
+          <Button variant="outlined" onClick={() => handleExport('pdf')}>
+            Exportar a PDF
+          </Button>
+          <FormControl sx={{ minWidth: 180 }}>
+            <InputLabel>Período</InputLabel>
+            <Select
+              value={period}
+              label="Período"
+              onChange={(e) => setPeriod(e.target.value)}
+            >
+              <MenuItem value="week">Esta Semana</MenuItem>
+              <MenuItem value="month">Este Mes</MenuItem>
+              <MenuItem value="year">Este Año</MenuItem>
+              <MenuItem value="custom">Personalizado</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
       </Box>
 
       {/* Tabs */}

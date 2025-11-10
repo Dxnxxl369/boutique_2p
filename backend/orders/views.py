@@ -13,6 +13,12 @@ from django_filters.rest_framework import DjangoFilterBackend
 from products.models import Product
 from users.models import User
 from .models import Order, OrderItem
+import io
+from django.http import HttpResponse
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.lib.units import inch
 from .serializers import OrderSerializer
 
 
@@ -128,8 +134,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         }
         return Response(data)
 
-    @action(detail=False, methods=["get"], url_path="reports-summary")
-    def reports_summary(self, request):
+    def _get_report_data(self):
         today = timezone.localdate()
         current_year = today.year
 
@@ -162,9 +167,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         monthly_sales = [
             {
                 "month": record["month"].strftime("%b"),
-                "sales": float(record["sales"]),
-                "costs": float(record["costs"]),
-                "profits": float(record["sales"] - record["costs"]),
+                "sales": str(record["sales"]),
+                "costs": str(record["costs"]),
+                "profits": str(record["sales"] - record["costs"]),
             }
             for record in monthly_items_qs
         ]
@@ -172,13 +177,16 @@ class OrderViewSet(viewsets.ModelViewSet):
         category_sales_qs = (
             OrderItem.objects.filter(order__status=Order.Status.COMPLETED)
             .values("product__category__name")
-            .annotate(amount=Coalesce(Sum("total_price"), 0), units=Coalesce(Sum("quantity"), 0))
+            .annotate(
+                amount=Coalesce(Sum("total_price"), Value(0, output_field=DecimalField())),
+                units=Coalesce(Sum("quantity"), 0)
+            )
             .order_by("-amount")
         )
         category_sales = [
             {
                 "category": record["product__category__name"] or "Sin categoría",
-                "amount": float(record["amount"]),
+                "amount": str(record["amount"]),
                 "units": int(record["units"]),
             }
             for record in category_sales_qs
@@ -188,7 +196,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             completed_orders.values("payment_method")
             .annotate(
                 count=Count("id"),
-                amount=Coalesce(Sum("total_amount"), 0),
+                amount=Coalesce(Sum("total_amount"), Value(0, output_field=DecimalField())),
             )
             .order_by("-amount")
         )
@@ -196,7 +204,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             {
                 "method": record["payment_method"],
                 "count": record["count"],
-                "amount": float(record["amount"]),
+                "amount": str(record["amount"]),
             }
             for record in payment_methods_qs
         ]
@@ -205,7 +213,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             completed_orders.values("customer_name", "customer_phone")
             .annotate(
                 orders=Count("id"),
-                amount=Coalesce(Sum("total_amount"), 0),
+                amount=Coalesce(Sum("total_amount"), Value(0, output_field=DecimalField())),
             )
             .order_by("-amount")[:5]
         )
@@ -213,8 +221,8 @@ class OrderViewSet(viewsets.ModelViewSet):
             {
                 "name": record["customer_name"],
                 "phone": record["customer_phone"],
-                "orders": record["orders"],
-                "amount": float(record["amount"]),
+                "orders": int(record["orders"]),
+                "amount": str(record["amount"]),
             }
             for record in top_customers_qs
         ]
@@ -228,11 +236,185 @@ class OrderViewSet(viewsets.ModelViewSet):
             for product in Product.objects.order_by("stock")[:20]
         ]
 
-        data = {
+        return {
             "monthly_sales": monthly_sales,
             "category_sales": category_sales,
             "payment_methods": payment_methods,
             "top_customers": top_customers,
             "inventory_status": inventory_status,
         }
+
+    @action(detail=False, methods=["get"], url_path="reports-summary")
+    def reports_summary(self, request):
+        data = self._get_report_data()
         return Response(data)
+
+    @action(detail=False, methods=["get"], url_path="reports-pdf")
+    def reports_pdf(self, request):
+        report_data = self._get_report_data()
+        monthly_sales = report_data["monthly_sales"]
+        category_sales = report_data["category_sales"]
+        payment_methods = report_data["payment_methods"]
+        top_customers = report_data["top_customers"]
+        inventory_status = report_data["inventory_status"]
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer)
+        styles = getSampleStyleSheet()
+        story = []
+
+        # Title
+        story.append(Paragraph("Reporte de Ventas y Rendimiento", styles['h1']))
+        story.append(Spacer(1, 0.2 * inch))
+
+        # Monthly Sales
+        story.append(Paragraph("Ventas Mensuales", styles['h2']))
+        data = [["Mes", "Ventas", "Costos", "Ganancias"]]
+        for item in monthly_sales:
+            data.append([item["month"], item["sales"], item["costs"], item["profits"]])
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        story.append(table)
+        story.append(PageBreak())
+
+        # Category Sales
+        story.append(Paragraph("Ventas por Categoría", styles['h2']))
+        data = [["Categoría", "Monto", "Unidades"]]
+        for item in category_sales:
+            data.append([item["category"], item["amount"], item["units"]])
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        story.append(table)
+        story.append(PageBreak())
+
+        # Payment Methods
+        story.append(Paragraph("Métodos de Pago", styles['h2']))
+        data = [["Método", "Cantidad", "Monto"]]
+        for item in payment_methods:
+            data.append([item["method"], item["count"], item["amount"]])
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        story.append(table)
+        story.append(PageBreak())
+
+        # Top Customers
+        story.append(Paragraph("Top Clientes", styles['h2']))
+        data = [["Nombre", "Teléfono", "Órdenes", "Monto"]]
+        for item in top_customers:
+            data.append([item["name"], item["phone"], item["orders"], item["amount"]])
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        story.append(table)
+        story.append(PageBreak())
+
+        # Inventory Status
+        story.append(Paragraph("Estado del Inventario", styles['h2']))
+        data = [["Producto", "Stock", "Estado"]]
+        for item in inventory_status:
+            data.append([item["product"], item["stock"], item["status"]])
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        story.append(table)
+
+        doc.build(buffer)
+        buffer.seek(0)
+
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="reporte_ventas.pdf"'
+        return response
+
+    @action(detail=False, methods=["get"], url_path="reports-excel")
+    def reports_excel(self, request):
+        report_data = self._get_report_data()
+        monthly_sales = report_data["monthly_sales"]
+        category_sales = report_data["category_sales"]
+        payment_methods = report_data["payment_methods"]
+        top_customers = report_data["top_customers"]
+        inventory_status = report_data["inventory_status"]
+
+        output = io.BytesIO()
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = "Reporte de Ventas"
+
+        # Monthly Sales
+        sheet.append(["Reporte de Ventas Mensuales"])
+        sheet.append(["Mes", "Ventas", "Costos", "Ganancias"])
+        for item in monthly_sales:
+            sheet.append([item["month"], item["sales"], item["costs"], item["profits"]])
+        sheet.append([])
+
+        # Category Sales
+        sheet.append(["Ventas por Categoría"])
+        sheet.append(["Categoría", "Monto", "Unidades"])
+        for item in category_sales:
+            sheet.append([item["category"], item["amount"], item["units"]])
+        sheet.append([])
+
+        # Payment Methods
+        sheet.append(["Método", "Cantidad", "Monto"])
+        for item in payment_methods:
+            sheet.append([item["method"], item["count"], item["amount"]])
+        sheet.append([])
+
+        # Top Customers
+        sheet.append(["Nombre", "Teléfono", "Órdenes", "Monto"])
+        for item in top_customers:
+            sheet.append([item["name"], item["phone"], item["orders"], item["amount"]])
+        sheet.append([])
+
+        # Inventory Status
+        sheet.append(["Producto", "Stock", "Estado"])
+        for item in inventory_status:
+            sheet.append([item["product"], item["stock"], item["status"]])
+        sheet.append([])
+
+        workbook.save(output)
+        output.seek(0)
+
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="reporte_ventas.xlsx"'
+        return response

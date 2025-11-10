@@ -1,105 +1,20 @@
-PS C:\examen2\boutique\mobile>  flutter build apk --debug
-Support for Android x86 targets will be removed in the next stable release after 3.27.
-See https://github.com/flutter/flutter/issues/157543 for details.
-Running Gradle task 'assembleDebug'...                             27,8s
-√ Built build\app\outputs\flutter-apk\app-debug.apk
-PS C:\examen2\boutique\mobile> flutter run
-Launching lib\main.dart on RMX2111 in debug mode...
-Running Gradle task 'assembleDebug'...                             33,6s
-√ Built build\app\outputs\flutter-apk\app-debug.apk
-Installing build\app\outputs\flutter-apk\app-debug.apk...           4,2s
-I/flutter (11805): [IMPORTANT:flutter/shell/platform/android/android_context_vk_impeller.cc(61)] Using the Impeller rendering backend (Vulkan).
-I/flutter (11805): [IMPORTANT:flutter/shell/platform/android/android_context_vk_impeller.cc(61)] Using the Impeller rendering backend (Vulkan).
-I/flutter (11805): User granted permission: AuthorizationStatus.authorized
-I/flutter (11805): FCM Token: clABGe2uQDq3TslXJD7IhD:APA91bH3uPwFhxa3-uTbgA2WTyGEb2a0kxQszbQSXv5T-Eo1tSp4UZK-k9KM61Z-9n6fDT_lx0S6juL9tEXfGybmbUWASDmin5scUWYQOxz3l0IOBsnMTpQ
-Syncing files to device RMX2111...                                 125ms
+Console AxiosError
 
-Flutter run key commands.
-r Hot reload. 
-R Hot restart.
-h List all available interactive commands.
-d Detach (terminate "flutter run" but leave application running).
-c Clear the screen
-q Quit (terminate the application on the device).
 
-A Dart VM Service on RMX2111 is available at: http://127.0.0.1:62878/CMClISN2UPo=/     
-D/SurfaceComposerClient(11805): VRR [FRTC] client handle [bufferId:18446744073709551615 framenumber:0] [ffffffff, ffffffff]
-I/Choreographer(11805): Skipped 83 frames!  The application may be doing too much work on its main thread.
-I/Quality (11805): Skipped: false 83 cost 1399.7028 refreshRate 0 processName com.example.mobile
-I/Quality (11805): Skipped: false 10 cost 182.74858 refreshRate 0 processName com.example.mobile
-E/BLASTBufferQueue(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#1](f:0,a:2) isEGL=1, mPendingRelease.size()=1, mMaxAcquiredBuffers=5, currentMaxAcquiredBufferCount=2
-E/OpenGLRenderer(11805): fbcNotifyFrameComplete error: undefined symbol: fbcNotifyFrameComplete
-E/OpenGLRenderer(11805): fbcNotifyNoRender error: undefined symbol: fbcNotifyNoRender
-D/SurfaceComposerClient(11805): VRR [FRTC] client handle [bufferId:18446744073709551615 framenumber:0] [ffffffff, ffffffff]
-The Flutter DevTools debugger and profiler on RMX2111 is available at:
-http://127.0.0.1:9101?uri=http://127.0.0.1:62878/CMClISN2UPo=/
-E/BLASTBufferQueue(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#1](f:0,a:3) isEGL=1, mPendingRelease.size()=2, mMaxAcquiredBuffers=5, currentMaxAcquiredBufferCount=2
-E/BLASTBufferQueue(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#1](f:0,a:4) isEGL=1, mPendingRelease.size()=3, mMaxAcquiredBuffers=5, currentMaxAcquiredBufferCount=2
-I/flutter (11805): Error sending FCM Token to backend: AuthException: No se pudo completar la solicitud (404).
-E/BLASTBufferQueue(11805): [ViewRootImpl[com.example.mobile/com.example.mobile.MainActivity]#0](f:0,a:2) isEGL=1, mPendingRelease.size()=1, mMaxAcquiredBuffers=5, currentMaxAcquiredBufferCount=2
-D/ProfileInstaller(11805): Installing profile for com.example.mobile
-I/BufferQueueProducer(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#1(BLAST Consumer)1](id:2e1d00000001,api:1,p:11805,c:11805) disconnect: api 1   
-E/BLASTBufferQueue(11805): BLASTBufferItemConsumer::onDisconnect()
-I/BufferQueueProducer(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#1(BLAST Consumer)1](id:2e1d00000001,api:0,p:-1,c:11805) disconnect: api -1     
-I/BLASTBufferQueue(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#1] destructor()
-I/BufferQueueConsumer(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#1(BLAST Consumer)1](id:2e1d00000001,api:0,p:-1,c:11805) disconnect
-I/BLASTBufferQueue(11805): releaseBufferCallbackThunk bufferId:50702088929288 framenumber:24 blastBufferQueue is dead
-I/BufferQueueProducer(11805): [ViewRootImpl[com.example.mobile/com.example.mobile.MainActivity]#0(BLAST Consumer)0](id:2e1d00000000,api:1,p:11805,c:11805) disconnect: api 1  
-E/BLASTBufferQueue(11805): BLASTBufferItemConsumer::onDisconnect()
-I/BLASTBufferQueue(11805): [ViewRootImpl[com.example.mobile/com.example.mobile.MainActivity]#0] destructor()
-I/BufferQueueConsumer(11805): [ViewRootImpl[com.example.mobile/com.example.mobile.MainActivity]#0(BLAST Consumer)0](id:2e1d00000000,api:0,p:-1,c:11805) disconnect
-I/BLASTBufferQueue(11805): releaseBufferCallbackThunk bufferId:50702088929294 framenumber:2 blastBufferQueue is dead
-I/Quality (11805): ActivityThread: activityResume delay 75 com.example.mobile 11805
-I/Quality (11805): Skipped: false 4 cost 74.58172 refreshRate 0 processName com.example.mobile
-I/BufferQueueConsumer(11805): [](id:2e1d00000002,api:0,p:-1,c:11805) connect: controlledByApp=false
-I/BLASTBufferQueue(11805): [ViewRootImpl[com.example.mobile/com.example.mobile.MainActivity]#2] constructor()
-I/BufferQueueProducer(11805): [ViewRootImpl[com.example.mobile/com.example.mobile.MainActivity]#2(BLAST Consumer)2](id:2e1d00000002,api:1,p:11805,c:11805) connect: api=1 producerControlledByApp=true
-I/BufferQueueConsumer(11805): [](id:2e1d00000003,api:0,p:-1,c:11805) connect: controlledByApp=false
-I/BLASTBufferQueue(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#3] constructor()
-I/BufferQueueProducer(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#3(BLAST Consumer)3](id:2e1d00000003,api:1,p:11805,c:11805) connect: api=1 producerControlledByApp=true
-I/BufferQueueProducer(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#3(BLAST Consumer)3](id:2e1d00000003,api:1,p:11805,c:11805) disconnect: api 1   
-E/BLASTBufferQueue(11805): BLASTBufferItemConsumer::onDisconnect()
-I/BufferQueueProducer(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#3(BLAST Consumer)3](id:2e1d00000003,api:1,p:11805,c:11805) connect: api=1 producerControlledByApp=true
-D/SurfaceComposerClient(11805): VRR [FRTC] client handle [bufferId:18446744073709551615 framenumber:0] [ffffffff, ffffffff]
-I/OpenGLRenderer(11805): Davey! duration=34112ms; Flags=1, FrameTimelineVsyncId=16118648, IntendedVsync=379054072393479, Vsync=379054239060149, InputEventId=0, HandleInputStart=379054255374130, AnimationStart=379054255387592, PerformTraversalsStart=379054255391053, DrawStart=379054276378361, FrameDeadline=379054109060146, FrameInterval=379054255142053, FrameStartTime=16666667, SyncQueued=379054277884823, SyncStart=379054278083284, IssueDrawCommandsStart=379054279652284, SwapBuffers=379054441460900, FrameCompleted=379088185460902, DequeueBufferDuration=1840616, QueueBufferDuration=946231, GpuCompleted=379088185460902, SwapBuffersCompleted=379054446350053, DisplayPresentTime=-1,
-D/SurfaceComposerClient(11805): VRR [FRTC] client handle [bufferId:18446744073709551615 framenumber:0] [ffffffff, ffffffff]
-E/BLASTBufferQueue(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#3](f:0,a:2) isEGL=1, mPendingRelease.size()=1, mMaxAcquiredBuffers=5, currentMaxAcquiredBufferCount=2
-D/OplusSystemUINavigationGesture(11805): [GESTURE_BUTTON] swipe from 1
-D/OplusSystemUINavigationGesture(11805): [GESTURE_BUTTON] Hit Gesture Region !
-I/Quality (11805): Skipped: false 11 cost 188.1478 refreshRate 0 processName com.example.mobile
-E/BLASTBufferQueue(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#3](f:0,a:3) isEGL=1, mPendingRelease.size()=2, mMaxAcquiredBuffers=5, currentMaxAcquiredBufferCount=2
-E/BLASTBufferQueue(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#3](f:0,a:5) isEGL=1, mPendingRelease.size()=3, mMaxAcquiredBuffers=5, currentMaxAcquiredBufferCount=2
-D/OplusSystemUINavigationGesture(11805): [GESTURE_BUTTON] swipe from 1
-D/OplusSystemUINavigationGesture(11805): [GESTURE_BUTTON] Hit Gesture Region !
-D/OplusSystemUINavigationGesture(11805): [GESTURE_BUTTON] swipe from 1
-D/OplusSystemUINavigationGesture(11805): [GESTURE_BUTTON] Hit Gesture Region !
-D/OplusSystemUINavigationGesture(11805): [GESTURE_BUTTON] swipe from 1
-D/OplusSystemUINavigationGesture(11805): [GESTURE_BUTTON] Hit Gesture Region !
-D/Activity(11805): dispatchKeyEvent to com.example.mobile.MainActivity@9fddc2d will call onBackPressed
-I/Quality (11805): Skipped: false 1 cost 19.861464 refreshRate 0 processName com.example.mobile
-D/OplusSystemUINavigationGesture(11805): [GESTURE_BUTTON] swipe from 1
-D/OplusSystemUINavigationGesture(11805): [GESTURE_BUTTON] Hit Gesture Region !
-D/OplusSystemUINavigationGesture(11805): [GESTURE_BUTTON] trigger!
-D/Activity(11805): dispatchKeyEvent to com.example.mobile.MainActivity@9fddc2d will call onBackPressed
-I/Quality (11805): Skipped: false 4 cost 70.71941 refreshRate 0 processName com.example.mobile
-I/Quality (11805): Skipped: false 1 cost 22.626465 refreshRate 0 processName com.example.mobile
-D/OplusSystemUINavigationGesture(11805): [GESTURE_BUTTON] swipe from 1
-D/OplusSystemUINavigationGesture(11805): [GESTURE_BUTTON] Hit Gesture Region !
-D/Activity(11805): dispatchKeyEvent to com.example.mobile.MainActivity@9fddc2d will call onBackPressed
-I/BufferQueueProducer(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#3(BLAST Consumer)3](id:2e1d00000003,api:1,p:11805,c:11805) disconnect: api 1   
-E/BLASTBufferQueue(11805): BLASTBufferItemConsumer::onDisconnect()
-I/BufferQueueProducer(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#3(BLAST Consumer)3](id:2e1d00000003,api:0,p:-1,c:11805) disconnect: api -1     
-I/BLASTBufferQueue(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#3] destructor()
-I/BufferQueueConsumer(11805): [SurfaceView[com.example.mobile/com.example.mobile.MainActivity]#3(BLAST Consumer)3](id:2e1d00000003,api:0,p:-1,c:11805) disconnect
-I/BufferQueueProducer(11805): [ViewRootImpl[com.example.mobile/com.example.mobile.MainActivity]#2(BLAST Consumer)2](id:2e1d00000002,api:1,p:11805,c:11805) disconnect: api 1  
-E/BLASTBufferQueue(11805): BLASTBufferItemConsumer::onDisconnect()
-I/BLASTBufferQueue(11805): [ViewRootImpl[com.example.mobile/com.example.mobile.MainActivity]#2] destructor()
-I/BufferQueueConsumer(11805): [ViewRootImpl[com.example.mobile/com.example.mobile.MainActivity]#2(BLAST Consumer)2](id:2e1d00000002,api:0,p:-1,c:11805) disconnect
-I/BLASTBufferQueue(11805): releaseBufferCallbackThunk bufferId:50702088929304 framenumber:277 blastBufferQueue is dead
-D/OplusScrollToTopManager(11805): unregisterGuidePopupDismissReceiverInSystemUI
-D/OplusScrollToTopManager(11805): Receiver not registered: android.view.OplusScrollToTopManager$1@92d1ff8
-D/OplusScrollToTopManager(11805): unregisterSystemUIBroadcastReceiver
-D/OplusScrollToTopManager(11805): java.lang.IllegalArgumentException: Receiver not registered: android.view.OplusScrollToTopManager$2@9c45cd1
-V/ZoomWindowDecorView(11805): removeZoomView
-D/View    (11805): [Warning] assignParent to null: this = DecorView@f30a3a1[MainActivity]
-I/BLASTBufferQueue(11805): releaseBufferCallbackThunk bufferId:50702088929308 framenumber:1 blastBufferQueue is dead
+Request failed with status code 404
+src/app/reportes/page.tsx (304:24) @ async handleExport
+
+
+  302 |     try {
+  303 |       const endpoint = format === 'excel' ? '/orders/reports-excel/' : '/orders/reports-pdf/';
+> 304 |       const response = await api.get(endpoint, {
+      |                        ^
+  305 |         headers: {
+  306 |           Authorization: `Bearer ${user.accessToken}`,
+  307 |         },
+Call Stack
+4
+
+Show 3 ignore-listed frame(s)
+async handleExport
+src/app/reportes/page.tsx (304:24)

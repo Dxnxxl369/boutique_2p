@@ -46,6 +46,7 @@ mobile/.flutter-plugins-dependencies
 mobile/.packages
 mobile/build/
 mobile/pubspec.lock
+mobile/google-services.json
 
 # ========================
 # General
