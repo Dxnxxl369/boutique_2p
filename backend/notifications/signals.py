@@ -26,9 +26,9 @@ def create_order_notification(sender, instance, created, **kwargs):
     # To avoid sending multiple notifications if the order is saved again without status change
     # For simplicity, we'll send it if the current status is 'completed'.
     # A more robust solution would involve pre_save or custom logic to track changes.
-    elif instance.status == Order.Status.COMPLETED:
+    elif instance.status == Order.Status.SHIPPED:
         if instance.created_by: # Ensure there's a user associated with the order
-            notification_message = f"Your Order #{instance.number} has been marked as 'completed' and is on its way!"
+            notification_message = f"Your Order #{instance.number} has been shipped and is on its way!"
             Notification.objects.create(
                 recipient=instance.created_by,
                 message=notification_message,
@@ -41,7 +41,7 @@ def create_order_notification(sender, instance, created, **kwargs):
                     from firebase_admin import messaging
                     message = messaging.Message(
                         notification=messaging.Notification(
-                            title="Order Status Update",
+                            title="Your Order is on its way!",
                             body=notification_message,
                         ),
                         data={

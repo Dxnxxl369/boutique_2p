@@ -30,70 +30,55 @@ export const useNotifications = () => {
 };
 
 export const NotificationProvider = ({ children }: { children: React.ReactNode }) => {
-  const { accessToken } = useAuth(); // Destructure accessToken
+  const { isAuthenticated, accessToken } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [socket, setSocket] = useState<WebSocket | null>(null); // Corrected indentation
-  
-  const playNotificationSound = () => {
-    const audio = new Audio('/sounds/notification.mp3'); // Assuming a sound file will be placed in /public/sounds
-    audio.play().catch(e => console.error("Error playing sound:", e));
-  };
   
   useEffect(() => {
-    if (accessToken) { // Use accessToken
-      // Correct WebSocket URL for notifications
-      const wsUrl = `${process.env.NEXT_PUBLIC_API_WS_URL}/ws/notifications/`;
-      // Append access token as a query parameter for WebSocket authentication
-      const newSocket = new WebSocket(`${wsUrl}?token=${accessToken}`);
-            newSocket.onopen = () => {
-              console.log('WebSocket connected to notifications');
-              // Authentication for Channels is typically handled via session cookies.
-              // If using JWT, it might need to be sent as a query param or in a custom header.
-              // For now, assuming session/cookie based auth is sufficient for the web admin.
-            };
-  
-            newSocket.onmessage = (event) => {
-              const eventData = JSON.parse(event.data);
-              
-              // Check if the message is a notification from our backend
-              if (eventData.type === 'notification') { // Matches 'type': 'send_notification' in backend consumer
-                  const newNotification: Notification = {
-                      id: eventData.id, // Use ID from backend
-                      notification_type: eventData.notification_type, // Use type from backend
-                      message: eventData.message,
-                      created_at: new Date(eventData.created_at), // Use created_at from backend
-                      is_read: eventData.is_read, // Use is_read from backend
-                      data: eventData, // Keep full event data for debugging/future use
-                  };
-  
-                  setNotifications(prev => [newNotification, ...prev]);
-                  playNotificationSound();
-              }
-            };
-        newSocket.onclose = () => {
-        console.log('WebSocket disconnected');
-        // Optional: implement reconnection logic
+    if (isAuthenticated && accessToken) {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+      const wsUrl = apiUrl.replace(/^http/, 'ws').replace('/api', '');
+      const finalWsUrl = `${wsUrl}/ws/notifications/?token=${accessToken}`;
+
+      const newSocket = new WebSocket(finalWsUrl);
+
+      newSocket.onopen = () => {
+        console.log('WebSocket connected to notifications');
       };
 
-      newSocket.onerror = (event: Event) => {
-        // WebSocket onerror event typically provides a generic Event object.
-        // If it's an ErrorEvent, it might have more details.
-        if (event instanceof ErrorEvent) {
-          console.error('WebSocket error:', event.message, event);
-        } 
+      newSocket.onmessage = (event) => {
+        const eventData = JSON.parse(event.data);
+        
+        if (eventData.type === 'notification') {
+          const newNotification: Notification = {
+            id: eventData.id,
+            notification_type: eventData.notification_type,
+            message: eventData.message,
+            created_at: new Date(eventData.created_at),
+            is_read: eventData.is_read,
+            data: eventData,
+          };
+
+          setNotifications(prev => [newNotification, ...prev]);
+        }
       };
 
-      setSocket(newSocket);
+      newSocket.onclose = (event) => {
+        console.log('WebSocket disconnected, reason:', event.reason);
+      };
+
+      newSocket.onerror = (err) => {
+        console.error('WebSocket error: ', err);
+      };
 
       return () => {
         newSocket.close();
       };
     }
-  }, [accessToken]); // Changed from token to accessToken
+  }, [isAuthenticated, accessToken]);
 
-  const markAsRead = useCallback((id: number) => { // ID is now a number
+  const markAsRead = useCallback((id: number) => {
     setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, is_read: true } : n)) // Use is_read
+      prev.map(n => (n.id === id ? { ...n, is_read: true } : n))
     );
   }, []);
 
@@ -101,7 +86,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     setNotifications([]);
   }, []);
 
-  const unreadCount = notifications.filter(n => !n.is_read).length; // Use is_read
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
     <NotificationContext.Provider value={{ notifications, unreadCount, markAsRead, clearNotifications }}>

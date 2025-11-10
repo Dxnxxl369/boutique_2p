@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -89,7 +90,7 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _errorMessage = null;
     _setBusy(true);
-    bool success = false; // Initialize a success flag
+    bool success = false;
 
     try {
       final session = await _service.login(
@@ -101,22 +102,35 @@ class AuthProvider extends ChangeNotifier {
       _currentUser = session.user;
       _accessToken = session.accessToken;
       _refreshToken = session.refreshToken;
+
+      // After successful login, update FCM token
+      try {
+        String? fcmToken = await FirebaseMessaging.instance.getToken();
+        if (fcmToken != null) {
+          await _service.updateFcmToken(fcmToken, session.accessToken);
+          print('FCM Token sent to backend on login.');
+        }
+      } catch (e) {
+        print('Error sending FCM Token on login: $e');
+        // This is a non-critical error, so we don't re-throw or fail the login
+      }
+
       notifyListeners();
-      success = true; // Set success to true
+      success = true;
     } on AuthException catch (error) {
       _errorMessage = error.message;
       _status = AuthStatus.unauthenticated;
       notifyListeners();
-      success = false; // Set success to false
+      success = false;
     } catch (e) {
       _errorMessage = 'Ocurrió un error inesperado. Por favor, inténtalo de nuevo.';
       _status = AuthStatus.unauthenticated;
       notifyListeners();
-      success = false; // Set success to false
+      success = false;
     } finally {
       _setBusy(false);
     }
-    return success; // Return the success flag
+    return success;
   }
 
   Future<bool> register({

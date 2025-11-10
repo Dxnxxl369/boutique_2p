@@ -29,7 +29,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     search_fields = ["number", "customer_name", "customer_email", "customer_phone", "items__product__name"]
     ordering_fields = ["created_at", "total_amount"]
     ordering = ["-created_at"]
-    http_method_names = ["get", "post", "head", "options"]
+    http_method_names = ["get", "post", "patch", "head", "options"]
 
     def get_queryset(self):
         user = self.request.user

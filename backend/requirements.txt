@@ -1,6 +1,7 @@
 asgiref==3.10.0
 cffi==2.0.0
 cryptography==46.0.3
+daphne==4.1.0
 Django==5.2.8
 django-cors-headers==4.9.0
 djangorestframework==3.16.1

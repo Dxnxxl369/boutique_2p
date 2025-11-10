@@ -50,6 +50,13 @@ interface Product {
   status: string;
 }
 
+interface Category {
+  id: number;
+  name: string;
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:8000';
+
 const currency = (value: number | string) =>
   Number(value).toLocaleString('es-CO', {
     style: 'currency',
@@ -59,9 +66,12 @@ const currency = (value: number | string) =>
 
 export default function ProductosPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openModal, setOpenModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formAlert, setFormAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -74,23 +84,28 @@ export default function ProductosPage() {
     color: '',
     brand: '',
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await api.get<Product[]>('/products/');
-        setProducts(response.data);
+        const [productsResponse, categoriesResponse] = await Promise.all([
+          api.get<Product[]>('/products/'),
+          api.get<Category[]>('/categories/'),
+        ]);
+        setProducts(productsResponse.data);
+        setCategories(categoriesResponse.data);
         setError(null);
       } catch (err) {
-        console.error('Error fetching products:', err);
-        setError('No se pudieron cargar los productos.');
+        console.error('Error fetching data:', err);
+        setError('No se pudieron cargar los datos iniciales.');
       } finally {
         setLoading(false);
       }
     };
-    fetchProducts();
+    fetchData();
   }, []);
 
   const handleOpen = () => setOpenModal(true);
@@ -108,7 +123,9 @@ export default function ProductosPage() {
       color: '',
       brand: '',
     });
+    setImageFile(null);
     setImagePreview(null);
+    setFormAlert(null);
   };
 
   const handleChange = (
@@ -126,6 +143,7 @@ export default function ProductosPage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -134,10 +152,72 @@ export default function ProductosPage() {
     }
   };
 
-  const handleSubmit = () => {
-    // TODO: Implementar guardado con API
-    console.log('Producto:', formData);
-    handleClose();
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    setFormAlert(null);
+
+    const productData = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value) {
+        productData.append(key, value);
+      }
+    });
+
+    if (imageFile) {
+      productData.append('image', imageFile);
+    }
+
+    try {
+      const response = await api.post<Product>('/products/', productData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setProducts((prev) => [response.data, ...prev]);
+      setFormAlert({ type: 'success', message: '¡Producto agregado con éxito!' });
+      setTimeout(() => {
+        handleClose();
+      }, 1500);
+    } catch (err: any) {
+      console.error('Error creating product:', err);
+      const errorData = err.response?.data;
+      let errorMessage = 'Ocurrió un error inesperado.';
+      if (errorData) {
+        // Convert error object to a more readable string
+        errorMessage = Object.entries(errorData)
+          .map(([key, value]) => `${key}: ${(value as string[]).join(', ')}`)
+          .join('; ');
+      }
+      setFormAlert({ type: 'error', message: `Error: ${errorMessage}` });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getImageUrl = (imagePath: string | null): string => {
+    if (!imagePath) {
+      return '/window.svg'; // Default placeholder
+    }
+
+    // Specific fix for malformed URLs like "/https:/..." or "/http%3A..."
+    if (imagePath.startsWith('/http')) {
+      const urlPart = imagePath.substring(1); // Remove the leading '/'
+      try {
+        return decodeURIComponent(urlPart);
+      } catch (e) {
+        console.error('Failed to decode image URL:', imagePath);
+        return '/window.svg';
+      }
+    }
+
+    // Handle regular absolute URLs
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    }
+
+    // Handle relative paths
+    return `${API_BASE_URL}${imagePath}`;
   };
 
   return (
@@ -186,11 +266,7 @@ export default function ProductosPage() {
                 <TableRow key={product.id}>
                   <TableCell>
                     <Box sx={{ position: 'relative', width: 40, height: 40, borderRadius: 1, overflow: 'hidden' }}>
-                      {product.image ? (
-                        <Image src="https://via.placeholder.com/40" alt={product.name} fill style={{ objectFit: 'cover' }} />
-                      ) : (
-                        <Box sx={{ bgcolor: 'grey.200', width: '100%', height: '100%' }} />
-                      )}
+                      <Image src={getImageUrl(product.image)} alt={product.name} fill style={{ objectFit: 'cover' }} />
                     </Box>
                   </TableCell>
                   <TableCell>{product.name}</TableCell>
@@ -231,6 +307,11 @@ export default function ProductosPage() {
         </DialogTitle>
 
         <DialogContent dividers sx={{ p: 3 }}>
+          {formAlert && (
+            <Alert severity={formAlert.type} sx={{ mb: 2 }}>
+              {formAlert.message}
+            </Alert>
+          )}
           <Grid container spacing={3}>
             {/* Imagen del Producto */}
             <Grid item xs={12}>
@@ -267,7 +348,10 @@ export default function ProductosPage() {
                       style={{ objectFit: 'contain' }}
                     />
                     <IconButton
-                      onClick={() => setImagePreview(null)}
+                      onClick={() => {
+                        setImagePreview(null);
+                        setImageFile(null);
+                      }}
                       sx={{
                         position: 'absolute',
                         top: -10,
@@ -374,7 +458,7 @@ export default function ProductosPage() {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
+              <FormControl fullWidth required>
                 <InputLabel>Categoría</InputLabel>
                 <Select
                   name="category"
@@ -382,12 +466,11 @@ export default function ProductosPage() {
                   onChange={handleChange}
                   label="Categoría"
                 >
-                  <MenuItem value="vestidos">Vestidos</MenuItem>
-                  <MenuItem value="blusas">Blusas</MenuItem>
-                  <MenuItem value="pantalones">Pantalones</MenuItem>
-                  <MenuItem value="faldas">Faldas</MenuItem>
-                  <MenuItem value="accesorios">Accesorios</MenuItem>
-                  <MenuItem value="zapatos">Zapatos</MenuItem>
+                  {categories.map((cat) => (
+                    <MenuItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
@@ -455,6 +538,7 @@ export default function ProductosPage() {
             onClick={handleClose}
             variant="outlined"
             sx={{ borderRadius: 2, px: 3 }}
+            disabled={isSubmitting}
           >
             Cancelar
           </Button>
@@ -462,8 +546,9 @@ export default function ProductosPage() {
             onClick={handleSubmit}
             variant="contained"
             sx={{ borderRadius: 2, px: 3 }}
+            disabled={isSubmitting}
           >
-            Registrar Producto
+            {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Registrar Producto'}
           </Button>
         </DialogActions>
       </Dialog>

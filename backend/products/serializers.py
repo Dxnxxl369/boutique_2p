@@ -10,6 +10,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
+    image = serializers.SerializerMethodField()
     
     class Meta:
         model = Product
@@ -18,6 +19,17 @@ class ProductSerializer(serializers.ModelSerializer):
             'category', 'category_name', 'stock', 'size', 'color', 
             'brand', 'image', 'status', 'created_at', 'updated_at'
         ]
+
+    def get_image(self, obj):
+        if obj.image:
+            # If the image name is an absolute URL, return it as is.
+            if obj.image.name.startswith('http'):
+                return obj.image.name
+            # Otherwise, build the full URL for the local file.
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+        return None
 
 
 class InventoryMovementSerializer(serializers.ModelSerializer):

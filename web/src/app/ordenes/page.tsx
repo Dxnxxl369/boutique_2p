@@ -27,6 +27,7 @@ import {
   Alert,
   Chip,
   CircularProgress,
+  Menu,
 } from '@mui/material';
 import { Add, Close, Delete, Visibility } from '@mui/icons-material';
 import AdminLayout from '@/components/AdminLayout';
@@ -122,6 +123,14 @@ const formatDate = (dateString: string) => {
     });
 };
 
+const statusColors: { [key: string]: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } = {
+  pending: 'warning',
+  processing: 'info',
+  shipped: 'primary',
+  completed: 'success',
+  cancelled: 'error',
+};
+
 export default function OrdenesPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
@@ -129,6 +138,10 @@ export default function OrdenesPage() {
 
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // State for status menu
+  const [statusMenuAnchorEl, setStatusMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedOrderForStatus, setSelectedOrderForStatus] = useState<Order | null>(null);
 
   const [openModal, setOpenModal] = useState(false);
   const [formData, setFormData] = useState<OrderFormData>({
@@ -174,6 +187,43 @@ export default function OrdenesPage() {
   const handleCloseDetails = () => {
     setDetailModalOpen(false);
     setSelectedOrder(null);
+  };
+
+  // Handlers for status menu
+  const handleStatusMenuOpen = (event: React.MouseEvent<HTMLElement>, order: Order) => {
+    setStatusMenuAnchorEl(event.currentTarget);
+    setSelectedOrderForStatus(order);
+  };
+
+  const handleStatusMenuClose = () => {
+    setStatusMenuAnchorEl(null);
+    setSelectedOrderForStatus(null);
+  };
+
+  const handleUpdateStatus = async (newStatus: string) => {
+    if (!selectedOrderForStatus) return;
+
+    const orderId = selectedOrderForStatus.id;
+    
+    try {
+      const response = await api.patch<Order>(`/orders/${orderId}/`, { status: newStatus });
+      const updatedOrder = response.data;
+
+      setOrders(prevOrders => 
+        prevOrders.map(o => o.id === orderId ? updatedOrder : o)
+      );
+      
+      // Also update the order in the detail modal if it's open
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder(updatedOrder);
+      }
+
+    } catch (err) {
+      console.error('Error updating order status:', err);
+      // Optionally show an error alert to the user
+    } finally {
+      handleStatusMenuClose();
+    }
   };
 
   useEffect(() => {
@@ -352,7 +402,13 @@ export default function OrdenesPage() {
                   <TableCell>{formatDate(order.created_at)}</TableCell>
                   <TableCell align="right">{currency(order.total_amount)}</TableCell>
                   <TableCell align="center">
-                    <Chip label={order.status} size="small" />
+                    <Chip 
+                      label={order.status} 
+                      size="small" 
+                      color={statusColors[order.status] || 'default'}
+                      onClick={(e) => handleStatusMenuOpen(e, order)}
+                      sx={{ cursor: 'pointer', textTransform: 'capitalize' }}
+                    />
                   </TableCell>
                   <TableCell align="center">
                     <IconButton size="small" onClick={() => handleViewDetails(order)}>
@@ -365,6 +421,24 @@ export default function OrdenesPage() {
           </Table>
         </TableContainer>
       )}
+
+      {/* Status Change Menu */}
+      <Menu
+        anchorEl={statusMenuAnchorEl}
+        open={Boolean(statusMenuAnchorEl)}
+        onClose={handleStatusMenuClose}
+      >
+        {['pending', 'processing', 'shipped', 'completed', 'cancelled'].map((status) => (
+          <MenuItem 
+            key={status} 
+            onClick={() => handleUpdateStatus(status)}
+            disabled={status === selectedOrderForStatus?.status}
+            sx={{ textTransform: 'capitalize' }}
+          >
+            {status}
+          </MenuItem>
+        ))}
+      </Menu>
 
       {/* Modal de Nueva Orden */}
       <Dialog

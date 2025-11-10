@@ -302,7 +302,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     key={notification.id}
                     onClick={() => {
                       markAsRead(notification.id);
-                      // Optionally navigate or show details
+                      if (notification.notification_type === 'new_order') {
+                        router.push('/ordenes');
+                      }
                       handleCloseNotificationMenu();
                     }}
                     sx={{

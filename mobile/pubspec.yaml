@@ -43,6 +43,7 @@ dependencies:
   collection: ^1.18.0
   firebase_core: ^4.2.1 # Add Firebase Core
   firebase_messaging: ^16.0.4 # Update Firebase Messaging to a compatible version
+  flutter_local_notifications: ^19.5.0
 
 dev_dependencies:
   flutter_test:

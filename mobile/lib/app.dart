@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'screens/notification_screen.dart';
+
 import 'providers/auth_provider.dart';
 import 'screens/main_screen.dart';
 import 'screens/login_screen.dart';
@@ -43,6 +45,7 @@ class BoutiqueApp extends StatelessWidget {
           routes: {
             LoginScreen.routeName: (_) => const LoginScreen(),
             RegisterScreen.routeName: (_) => const RegisterScreen(),
+            NotificationScreen.routeName: (_) => const NotificationScreen(),
           },
           home: _buildHomeForStatus(auth.status),
         );
