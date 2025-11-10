@@ -8,9 +8,9 @@ class Command(BaseCommand):
     help = 'Create an admin user for the boutique system'
 
     def add_arguments(self, parser):
-        parser.add_argument('--username', type=str, default='admin', help='Username for admin')
+        parser.add_argument('--username', type=str, default='admin_innovatech', help='Username for admin')
         parser.add_argument('--email', type=str, default='admin@boutique.com', help='Email for admin')
-        parser.add_argument('--password', type=str, default='admin123', help='Password for admin')
+        parser.add_argument('--password', type=str, default='empresa123', help='Password for admin')
         parser.add_argument('--first-name', type=str, default='Admin', help='First name')
         parser.add_argument('--last-name', type=str, default='Boutique', help='Last name')
 

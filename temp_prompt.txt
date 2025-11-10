@@ -1,0 +1,6 @@
+# Archivo: backend/.env
+DB_NAME=boutique_bd
+DB_USER=postgres
+DB_PASSWORD=password
+DB_HOST=localhost
+DB_PORT=5432
