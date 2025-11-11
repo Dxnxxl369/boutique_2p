@@ -14,6 +14,7 @@ from products.models import Product
 from users.models import User
 from .models import Order, OrderItem
 import io
+import openpyxl
 from django.http import HttpResponse
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet
@@ -134,11 +135,45 @@ class OrderViewSet(viewsets.ModelViewSet):
         }
         return Response(data)
 
-    def _get_report_data(self):
+    def _get_report_data(self, period: str = "month"):
         today = timezone.localdate()
         current_year = today.year
+        
+        completed_orders_base = Order.objects.filter(status=Order.Status.COMPLETED)
 
-        completed_orders = Order.objects.filter(status=Order.Status.COMPLETED)
+        if period == "week":
+            start_date = today - timedelta(days=today.weekday()) # Monday
+            completed_orders = completed_orders_base.filter(created_at__date__gte=start_date)
+        elif period == "month":
+            completed_orders = completed_orders_base.filter(created_at__year=today.year, created_at__month=today.month)
+        elif period == "year":
+            completed_orders = completed_orders_base.filter(created_at__year=today.year)
+        else: # Default to month if invalid period
+            completed_orders = completed_orders_base.filter(created_at__year=today.year, created_at__month=today.month)
+
+        decimal_zero = Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+        cost_expression = ExpressionWrapper(
+            Coalesce(F("product__cost"), decimal_zero),
+            output_field=DecimalField(max_digits=12, decimal_places=2),
+        )
+        item_cost_expression = ExpressionWrapper(
+            cost_expression * F("quantity"),
+            output_field=DecimalField(max_digits=12, decimal_places=2),
+        )
+
+        # Monthly sales (this will now be filtered by the period for all reports)
+        monthly_items_qs = (
+            OrderItem.objects.filter(
+                order__in=completed_orders, # Filter by the period-adjusted completed_orders
+            )
+            .annotate(month=TruncMonth("order__created_at"))
+            .values("month")
+            .annotate(
+                sales=Coalesce(Sum("total_price"), decimal_zero),
+                costs=Coalesce(Sum(item_cost_expression), decimal_zero),
+            )
+            .order_by("month")
+        )
 
         decimal_zero = Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
         cost_expression = ExpressionWrapper(
@@ -246,12 +281,14 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="reports-summary")
     def reports_summary(self, request):
-        data = self._get_report_data()
+        period = request.query_params.get("period", "month")
+        data = self._get_report_data(period=period)
         return Response(data)
 
     @action(detail=False, methods=["get"], url_path="reports-pdf")
     def reports_pdf(self, request):
-        report_data = self._get_report_data()
+        period = request.query_params.get("period", "month")
+        report_data = self._get_report_data(period=period)
         monthly_sales = report_data["monthly_sales"]
         category_sales = report_data["category_sales"]
         payment_methods = report_data["payment_methods"]
@@ -266,6 +303,114 @@ class OrderViewSet(viewsets.ModelViewSet):
         # Title
         story.append(Paragraph("Reporte de Ventas y Rendimiento", styles['h1']))
         story.append(Spacer(1, 0.2 * inch))
+
+        # Monthly Sales
+        if monthly_sales: # Add check for empty data
+            story.append(Paragraph("Ventas Mensuales", styles['h2']))
+            data = [["Mes", "Ventas", "Costos", "Ganancias"]]
+            for item in monthly_sales:
+                data.append([item["month"], item["sales"], item["costs"], item["profits"]])
+            table = Table(data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ]))
+            story.append(table)
+            story.append(PageBreak())
+        else:
+            story.append(Paragraph("No hay datos de ventas mensuales para mostrar.", styles['Normal']))
+            story.append(PageBreak())
+
+        # Category Sales
+        if category_sales: # Add check for empty data
+            story.append(Paragraph("Ventas por Categoría", styles['h2']))
+            data = [["Categoría", "Monto", "Unidades"]]
+            for item in category_sales:
+                data.append([item["category"], item["amount"], item["units"]])
+            table = Table(data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ]))
+            story.append(table)
+            story.append(PageBreak())
+        else:
+            story.append(Paragraph("No hay datos de ventas por categoría para mostrar.", styles['Normal']))
+            story.append(PageBreak())
+
+        # Payment Methods
+        if payment_methods: # Add check for empty data
+            story.append(Paragraph("Métodos de Pago", styles['h2']))
+            data = [["Método", "Cantidad", "Monto"]]
+            for item in payment_methods:
+                data.append([item["method"], item["count"], item["amount"]])
+            table = Table(data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ]))
+            story.append(table)
+            story.append(PageBreak())
+        else:
+            story.append(Paragraph("No hay datos de métodos de pago para mostrar.", styles['Normal']))
+            story.append(PageBreak())
+
+        # Top Customers
+        if top_customers: # Add check for empty data
+            story.append(Paragraph("Top Clientes", styles['h2']))
+            data = [["Nombre", "Teléfono", "Órdenes", "Monto"]]
+            for item in top_customers:
+                data.append([item["name"], item["phone"], item["orders"], item["amount"]])
+            table = Table(data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ]))
+            story.append(table)
+            story.append(PageBreak())
+        else:
+            story.append(Paragraph("No hay datos de top clientes para mostrar.", styles['Normal']))
+            story.append(PageBreak())
+
+        # Inventory Status
+        if inventory_status: # Add check for empty data
+            story.append(Paragraph("Estado del Inventario", styles['h2']))
+            data = [["Producto", "Stock", "Estado"]]
+            for item in inventory_status:
+                data.append([item["product"], item["stock"], item["status"]])
+            table = Table(data)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ]))
+            story.append(table)
+        else:
+            story.append(Paragraph("No hay datos de estado de inventario para mostrar.", styles['Normal']))
 
         # Monthly Sales
         story.append(Paragraph("Ventas Mensuales", styles['h2']))
@@ -356,7 +501,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         ]))
         story.append(table)
 
-        doc.build(buffer)
+        doc.build(story)
         buffer.seek(0)
 
         response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
@@ -365,7 +510,8 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="reports-excel")
     def reports_excel(self, request):
-        report_data = self._get_report_data()
+        period = request.query_params.get("period", "month")
+        report_data = self._get_report_data(period=period)
         monthly_sales = report_data["monthly_sales"]
         category_sales = report_data["category_sales"]
         payment_methods = report_data["payment_methods"]
