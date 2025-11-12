@@ -1,18 +1,34 @@
-(venv) PS C:\examen2\boutique\backend>  daphne -b 0.0.0.0 -p 8000 config.asgi:application
-Firebase Admin SDK initialized successfully.
-2025-11-12 03:01:44,961 INFO     Starting server at tcp:port=8000:interface=0.0.0.0
-2025-11-12 03:01:44,962 INFO     HTTP/2 support not enabled (install the http2 and tls Twisted extras)
-2025-11-12 03:01:44,963 INFO     Configuring endpoint tcp:port=8000:interface=0.0.0.0
-2025-11-12 03:01:44,963 INFO     Listening on TCP address 0.0.0.0:8000
-127.0.0.1:54776 - - [12/Nov/2025:03:01:46] "OPTIONS /api/auth/me/" 200 -
-127.0.0.1:54776 - - [12/Nov/2025:03:01:47] "GET /api/auth/me/" 200 345
-127.0.0.1:54776 - - [12/Nov/2025:03:01:48] "OPTIONS /api/orders/dashboard-summary/" 200 -
-127.0.0.1:54776 - - [12/Nov/2025:03:01:48] "GET /api/orders/dashboard-summary/" 200 389
-127.0.0.1:62418 - - [12/Nov/2025:03:01:48] "WSCONNECTING /ws/notifications/" - -
-127.0.0.1:62418 - - [12/Nov/2025:03:01:48] "WSCONNECT /ws/notifications/" - -
-Received voice command: productos más vendidos.
-127.0.0.1:51700 - - [12/Nov/2025:03:02:08] "POST /api/orders/voice-command/" 200 53
-Received voice command: productos con esta bajo.
-127.0.0.1:60562 - - [12/Nov/2025:03:02:28] "POST /api/orders/voice-command/" 200 53
-Received voice command: productos con stock bajo.
-127.0.0.1:55139 - - [12/Nov/2025:03:03:23] "POST /api/orders/voice-command/" 200 53
+PS C:\examen2\boutique\web> npm run build
+
+> web@0.1.0 build
+> next build
+
+   ▲ Next.js 16.0.1 (Turbopack)
+   - Environments: .env.local
+
+ ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+   Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+./src/app/inventario/page.tsx:448:20
+Parsing ecmascript source code failed
+  446 |                 </Select>
+  447 |               </FormControl>
+> 448 |             </Grid>
+      |                    ^
+> 449 |
+      | ^
+> 450 |             {/* Producto */}
+      | ^^^^^^^^^^^^^
+  451 |             <Box sx={{ gridColumn: 'span 12' }}>
+  452 |
+  453 |             {/* Cantidad y Motivo */}
+
+Expected '</', got 'jsx text (
+
+            )'
+
+
+    at <unknown> (./src/app/inventario/page.tsx:448:20)
+PS C:\examen2\boutique\web> 

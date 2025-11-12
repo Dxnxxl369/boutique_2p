@@ -183,127 +183,130 @@ export default function InventarioPage() {
       </Box>
 
       {/* Resumen de Inventario */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ cursor: 'pointer' }} onClick={() => router.push('/productos')}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box
-                  sx={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 2,
-                    bgcolor: 'primary.lighter',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <InventoryIcon color="primary" />
-                </Box>
-                <Box>
-                  <Typography variant="h4" fontWeight={700}>
-                    {loadingProducts ? <CircularProgress size={24} /> : totalProducts}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Total Productos
-                  </Typography>
-                </Box>
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 3,
+          mb: 4,
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: 'repeat(2, 1fr)',
+            md: 'repeat(4, 1fr)',
+          },
+        }}
+      >
+        <Card sx={{ cursor: 'pointer' }} onClick={() => router.push('/productos')}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 2,
+                  bgcolor: 'primary.lighter',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <InventoryIcon color="primary" />
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+              <Box>
+                <Typography variant="h4" fontWeight={700}>
+                  {loadingProducts ? <CircularProgress size={24} /> : totalProducts}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Total Productos
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ cursor: 'pointer' }} onClick={() => router.push('/movimientos-inventario?movement_type=entrada')}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box
-                  sx={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 2,
-                    bgcolor: 'success.lighter',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <TrendingUp sx={{ color: 'success.main' }} />
-                </Box>
-                <Box>
-                  <Typography variant="h4" fontWeight={700}>
-                    0
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Entradas
-                  </Typography>
-                </Box>
+        <Card sx={{ cursor: 'pointer' }} onClick={() => router.push('/movimientos-inventario?movement_type=entrada')}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 2,
+                  bgcolor: 'success.lighter',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <TrendingUp sx={{ color: 'success.main' }} />
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+              <Box>
+                <Typography variant="h4" fontWeight={700}>
+                  0
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Entradas
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ cursor: 'pointer' }} onClick={() => router.push('/movimientos-inventario?movement_type=salida')}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box
-                  sx={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 2,
-                    bgcolor: 'error.lighter',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <TrendingDown sx={{ color: 'error.main' }} />
-                </Box>
-                <Box>
-                  <Typography variant="h4" fontWeight={700}>
-                    0
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Salidas
-                  </Typography>
-                </Box>
+        <Card sx={{ cursor: 'pointer' }} onClick={() => router.push('/movimientos-inventario?movement_type=salida')}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 2,
+                  bgcolor: 'error.lighter',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <TrendingDown sx={{ color: 'error.main' }} />
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+              <Box>
+                <Typography variant="h4" fontWeight={700}>
+                  0
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Salidas
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
 
-        <Grid item xs={12} sm={6} md={3}>
-          <Card sx={{ cursor: 'pointer' }} onClick={() => router.push('/productos?low_stock=true')}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box
-                  sx={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 2,
-                    bgcolor: 'warning.lighter',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Warning sx={{ color: 'warning.main' }} />
-                </Box>
-                <Box>
-                  <Typography variant="h4" fontWeight={700}>
-                    {loadingProducts ? <CircularProgress size={24} /> : lowStockProducts}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Stock Bajo
-                  </Typography>
-                </Box>
+        <Card sx={{ cursor: 'pointer' }} onClick={() => router.push('/productos?low_stock=true')}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box
+                sx={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 2,
+                  bgcolor: 'warning.lighter',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Warning sx={{ color: 'warning.main' }} />
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+              <Box>
+                <Typography variant="h4" fontWeight={700}>
+                  {loadingProducts ? <CircularProgress size={24} /> : lowStockProducts}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Stock Bajo
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
 
       {/* Modal de Registro de Movimiento */}
       <Dialog
@@ -358,9 +361,10 @@ export default function InventarioPage() {
         </DialogTitle>
 
         <DialogContent sx={{ p: 4 }}>
-          <Grid container spacing={3}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 3 }}>
             {/* Tipo de Movimiento */}
-            <Grid item xs={12}>
+            // @ts-ignore
+            <Box sx={{ gridColumn: 'span 12' }}>
               <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ mb: 1 }}>
                 Tipo de Movimiento *
               </Typography>
@@ -444,48 +448,7 @@ export default function InventarioPage() {
             </Grid>
 
             {/* Producto */}
-            <Grid item xs={12}>
-              <Typography variant="subtitle2" fontWeight={600} gutterBottom sx={{ mb: 1 }}>
-                Producto *
-              </Typography>
-              <FormControl fullWidth required>
-                <Select
-                  name="product"
-                  value={formData.product}
-                  onChange={handleChange}
-                  displayEmpty
-                  sx={{
-                    '& .MuiSelect-select': {
-                      py: 1.5,
-                    }
-                  }}
-                >
-                  <MenuItem value="" disabled>
-                    <Typography color="text.secondary">
-                      {products.length === 0 ? 'No hay productos disponibles' : 'Selecciona un producto'}
-                    </Typography>
-                  </MenuItem>
-                  {products.map((product) => (
-                    <MenuItem key={product.id} value={product.id.toString()}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                        <Box>
-                          <Typography variant="body2" fontWeight={600}>{product.name}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            SKU: {product.sku} {product.size && `• Talla: ${product.size}`}
-                          </Typography>
-                        </Box>
-                        <Chip 
-                          label={`Stock: ${product.stock}`} 
-                          size="small" 
-                          color={product.stock > 10 ? 'success' : product.stock > 5 ? 'warning' : 'error'} 
-                          variant="outlined" 
-                        />
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
+            <Box sx={{ gridColumn: 'span 12' }}>
 
             {/* Cantidad y Motivo */}
             <Grid item xs={12} sm={5}>

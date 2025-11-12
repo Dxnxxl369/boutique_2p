@@ -15,49 +15,35 @@ class ProfileScreen extends StatelessWidget {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mi Perfil'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar Sesión',
-            onPressed: () {
-              authProvider.logout();
-            },
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () => context.read<OrderProvider>().fetchUserOrders(),
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: [
-            // User Info Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(user?.fullName ?? 'No name', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 8),
-                    _buildInfoRow(Icons.person_outline, user?.username ?? '...'),
-                    _buildInfoRow(Icons.email_outlined, user?.email ?? '...'),
-                    _buildInfoRow(Icons.phone_outlined, user?.phone ?? 'No proporcionado'),
-                    _buildInfoRow(Icons.home_outlined, user?.address ?? 'No proporcionada'),
-                  ],
-                ),
+    return RefreshIndicator(
+      onRefresh: () => context.read<OrderProvider>().fetchUserOrders(),
+      child: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          // User Info Card
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(user?.fullName ?? 'No name', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 8),
+                  _buildInfoRow(Icons.person_outline, user?.username ?? '...'),
+                  _buildInfoRow(Icons.email_outlined, user?.email ?? '...'),
+                  _buildInfoRow(Icons.phone_outlined, user?.phone ?? 'No proporcionado'),
+                  _buildInfoRow(Icons.home_outlined, user?.address ?? 'No proporcionada'),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
+          ),
+          const SizedBox(height: 24),
 
-            // Orders Section
-            Text('Mis Pedidos', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            _buildOrderList(context),
-          ],
-        ),
+          // Orders Section
+          Text('Mis Pedidos', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          _buildOrderList(context),
+        ],
       ),
     );
   }

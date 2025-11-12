@@ -38,6 +38,76 @@ import { useAuth } from '@/contexts/AuthContext';
 import AdminLayout from '@/components/AdminLayout';
 import api from '@/lib/axios';
 
+// Explicitly declare Web Speech API interfaces to resolve TypeScript errors
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+  }
+  interface SpeechRecognitionEvent extends Event {
+    readonly resultIndex: number;
+    readonly results: SpeechRecognitionResultList;
+  }
+  interface SpeechRecognitionErrorEvent extends Event {
+    readonly error: SpeechRecognitionErrorCode;
+    readonly message: string;
+  }
+  interface SpeechRecognitionResultList {
+    [index: number]: SpeechRecognitionResult;
+    readonly length: number;
+    item(index: number): SpeechRecognitionResult;
+  }
+  interface SpeechRecognitionResult {
+    [index: number]: SpeechRecognitionAlternative;
+    readonly length: number;
+    item(index: number): SpeechRecognitionAlternative;
+    readonly isFinal: boolean;
+  }
+  interface SpeechRecognitionAlternative {
+    readonly transcript: string;
+    readonly confidence: number;
+  }
+  type SpeechRecognitionErrorCode =
+    | 'no-speech'
+    | 'aborted'
+    | 'audio-capture'
+    | 'network'
+    | 'not-allowed'
+    | 'service-not-allowed'
+    | 'bad-grammar'
+    | 'language-not-supported';
+}
+
+interface DashboardStats {
+  total_products: number;
+  total_customers: number;
+  today_sales: number;
+  month_sales: number;
+}
+
+interface WeeklySalesRecord {
+  day: string;
+  total: number;
+}
+
+interface CategorySalesRecord {
+  name: string;
+  amount: number;
+  color?: string; // Optional, as it's added dynamically
+}
+
+interface TopProductRecord {
+  name: string;
+  units: number;
+  amount?: number; // Optional, as it's used in voice report but not always present in topProductsData
+}
+
+interface StatCard {
+  title: string;
+  value: string;
+  icon: ReactNode;
+  color: string;
+}
+
 const DASHBOARD_CATEGORY_COLORS = ['#FF6B9D', '#C44569', '#A55EEA', '#26C6DA', '#FFA726'];
 
 export default function DashboardPage() {

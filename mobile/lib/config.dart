@@ -1,6 +1,6 @@
 const String kApiBaseUrl = String.fromEnvironment(
   'API_URL',
-  defaultValue: 'http://192.168.3.37:8000/api',
+  defaultValue: 'http://192.168.0.13:8000/api',
 );
 
 const String kAuthLoginPath = '/auth/login/';
@@ -11,5 +11,5 @@ const String kAuthUpdateFcmTokenPath = '/auth/users/update_fcm_token/'; // New p
 
 const String kImageBaseUrl = String.fromEnvironment(
   'IMAGE_URL',
-  defaultValue: 'http://192.168.3.37:8000', // Assuming images are served from the backend root
+  defaultValue: 'http://192.168.0.13:8000', // Assuming images are served from the backend root
 );

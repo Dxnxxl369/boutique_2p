@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Typography,
@@ -15,7 +15,10 @@ import {
   Tab,
   Alert,
   CircularProgress,
-  Button, // Added Button import
+  Button,
+  TextField, // Added TextField import
+  Chip, // Added Chip import
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper // Added table imports
 } from '@mui/material';
 import {
   BarChart,
@@ -32,6 +35,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import { MicNone, Search } from '@mui/icons-material'; // Added MicNone and Search icons
 import AdminLayout from '@/components/AdminLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/lib/axios';
@@ -136,6 +140,16 @@ export default function ReportesPage() {
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // New state variables for "Por Búsqueda" tab
+  const [searchText, setSearchText] = useState('');
+  const [isListeningVoiceCommand, setIsListeningVoiceCommand] = useState(false);
+  const [voiceCommandText, setVoiceCommandText] = useState('');
+  const [searchReportData, setSearchReportData] = useState<any>(null);
+  const [pills, setPills] = useState<string[]>([]);
+  const [addPillText, setAddPillText] = useState('');
+  const [loadingSearch, setLoadingSearch] = useState(false);
+
+
   const [monthlySales, setMonthlySales] = useState<MonthlySalesRecord[]>([]);
   const [categorySales, setCategorySales] = useState<CategorySalesRecord[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodRecord[]>([]);
@@ -151,7 +165,7 @@ export default function ReportesPage() {
   }, [authLoading, user, isAdmin, router]);
 
   useEffect(() => {
-    if (!authLoading && user && isAdmin) {
+    if (!authLoading && user && isAdmin && tabValue !== 4) { // Only fetch summary if not in "Por Búsqueda" tab
       const fetchSummary = async () => {
         try {
           setLoadingSummary(true);
@@ -232,7 +246,7 @@ export default function ReportesPage() {
 
       fetchSummary();
     }
-  }, [authLoading, user, isAdmin]);
+  }, [authLoading, user, isAdmin, tabValue]); // Added tabValue to dependencies
 
   const formatCurrency = (value: number) =>
     value.toLocaleString('es-CO', {
@@ -286,13 +300,119 @@ export default function ReportesPage() {
     [inventoryStatus]
   );
 
-  if (authLoading) {
-    return null;
-  }
+  const handleVoiceCommand = useCallback(() => {
+    if (!('webkitSpeechRecognition' in window)) {
+      alert('Tu navegador no soporta el reconocimiento de voz. Por favor, usa Chrome.');
+      return;
+    }
 
-  if (!user || !isAdmin) {
-    return null;
-  }
+    const SpeechRecognition = (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.lang = 'es-ES';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListeningVoiceCommand(true);
+      setVoiceCommandText('');
+      setSearchReportData(null);
+      setPills([]); // Clear pills when using voice command
+      console.log('Reconocimiento de voz iniciado...');
+    };
+
+    recognition.onresult = async (event: SpeechRecognitionEvent) => {
+      const transcript = event.results[0][0].transcript;
+      setVoiceCommandText(transcript);
+      console.log('Comando de voz detectado (transcripción):', transcript); // Added logging
+
+      try {
+        setLoadingSearch(true);
+        const response = await api.post('/orders/voice-command/', { command_text: transcript });
+        setSearchReportData(response.data);
+      } catch (error) {
+        console.error('Error al enviar comando de voz al backend:', error);
+        setSearchReportData({ message: 'Error al procesar el comando de voz.' });
+      } finally {
+        setLoadingSearch(false);
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListeningVoiceCommand(false);
+      console.log('Reconocimiento de voz finalizado.');
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      setIsListeningVoiceCommand(false);
+      console.error('Error en el reconocimiento de voz:', event.error);
+      setSearchReportData({ message: `Error en el reconocimiento de voz: ${event.error}` });
+    };
+
+    recognition.start();
+  }, []);
+
+  const handleSearchSubmit = async (command: string) => {
+    if (!command.trim()) return;
+    setPills([]); // Clear pills when using text command
+    try {
+      setLoadingSearch(true);
+      const response = await api.post('/orders/voice-command/', { command_text: command });
+      setSearchReportData(response.data);
+    } catch (error) {
+      console.error('Error al enviar comando de texto al backend:', error);
+      setSearchReportData({ message: 'Error al procesar el comando de texto.' });
+    } finally {
+      setLoadingSearch(false);
+    }
+  };
+
+  const handleAddPill = () => {
+    if (addPillText.trim()) {
+      const parts = addPillText.trim().split(':');
+      if (parts.length === 3) {
+        const [field, operator, value] = parts;
+        const newPill = { field, operator, value };
+        const updatedPills = [...pills, newPill];
+        setPills(updatedPills);
+        setAddPillText('');
+        handleSearchSubmitWithPills(updatedPills);
+      } else {
+        setError('Formato de píldora inválido. Use "campo:operador:valor" (ej. "name:contains:camisa", "price:gt:50").');
+      }
+    }
+  };
+
+  const handleRemovePill = (pillToRemove: any) => { // pillToRemove will be an object now
+    const updatedPills = pills.filter(pill => pill !== pillToRemove);
+    setPills(updatedPills);
+    handleSearchSubmitWithPills(updatedPills);
+  };
+
+  const handleSearchSubmitWithPills = async (currentPills: any[]) => { // currentPills is now an array of objects
+    if (currentPills.length === 0) {
+      setSearchReportData(null);
+      return;
+    }
+    try {
+      setLoadingSearch(true);
+      const response = await api.post('/orders/voice-command/', { pills: currentPills }); // Send structured pills
+      setSearchReportData(response.data);
+    } catch (error) {
+      console.error('Error al enviar pills al backend:', error);
+      setSearchReportData({ message: 'Error al procesar pills.' });
+    } finally {
+      setLoadingSearch(false);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchText('');
+    setVoiceCommandText('');
+    setPills([]);
+    setSearchReportData(null);
+    setError(null); // Clear any search-related errors
+  };
 
   const handleExport = async (format: 'excel' | 'pdf') => {
     if (!user || !isAdmin) {
@@ -300,8 +420,26 @@ export default function ReportesPage() {
       return;
     }
     try {
-      const endpoint = format === 'excel' ? '/orders/reports-excel/' : '/orders/reports-pdf/';
+      let endpoint = '';
+      let params: any = {};
+
+      if (tabValue !== 4) { // General reports
+        endpoint = format === 'excel' ? '/orders/reports-excel/' : '/orders/reports-pdf/';
+        params = { period: period };
+      } else { // "Por Búsqueda" tab reports
+        endpoint = format === 'excel' ? '/orders/search-reports-excel/' : '/orders/search-reports-pdf/'; // New backend endpoints
+        // Pass current search criteria
+        if (searchText) {
+          params.command_text = searchText;
+        } else if (voiceCommandText) {
+          params.command_text = voiceCommandText;
+        } else if (pills.length > 0) {
+          params.pills = JSON.stringify(pills); // Send pills as a JSON string
+        }
+      }
+
       const response = await api.get(endpoint, {
+        params: params,
         headers: {
           Authorization: `Bearer ${user.accessToken}`,
         },
@@ -311,7 +449,13 @@ export default function ReportesPage() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `reporte_ventas.${format === 'excel' ? 'xlsx' : 'pdf'}`);
+      let filename = `reporte_ventas.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+      if (tabValue === 4 && searchReportData?.report_type) {
+        filename = `reporte_${searchReportData.report_type}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+      } else if (tabValue === 4 && (searchText || voiceCommandText || pills.length > 0)) {
+        filename = `reporte_busqueda.${format === 'excel' ? 'xlsx' : 'pdf'}`;
+      }
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
@@ -324,6 +468,15 @@ export default function ReportesPage() {
       setError(message ?? `No fue posible exportar el reporte a ${format}.`);
     }
   };
+
+
+  if (authLoading) {
+    return null;
+  }
+
+  if (!user || !isAdmin) {
+    return null;
+  }
 
   return (
     <AdminLayout>
@@ -343,19 +496,21 @@ export default function ReportesPage() {
           <Button variant="outlined" onClick={() => handleExport('pdf')}>
             Exportar a PDF
           </Button>
-          <FormControl sx={{ minWidth: 180 }}>
-            <InputLabel>Período</InputLabel>
-            <Select
-              value={period}
-              label="Período"
-              onChange={(e) => setPeriod(e.target.value)}
-            >
-              <MenuItem value="week">Esta Semana</MenuItem>
-              <MenuItem value="month">Este Mes</MenuItem>
-              <MenuItem value="year">Este Año</MenuItem>
-              <MenuItem value="custom">Personalizado</MenuItem>
-            </Select>
-          </FormControl>
+          {tabValue !== 4 && ( // Only show period selector for main tabs
+            <FormControl sx={{ minWidth: 180 }}>
+              <InputLabel>Período</InputLabel>
+              <Select
+                value={period}
+                label="Período"
+                onChange={(e) => setPeriod(e.target.value)}
+              >
+                <MenuItem value="week">Esta Semana</MenuItem>
+                <MenuItem value="month">Este Mes</MenuItem>
+                <MenuItem value="year">Este Año</MenuItem>
+                <MenuItem value="custom">Personalizado</MenuItem>
+              </Select>
+            </FormControl>
+          )}
         </Box>
       </Box>
 
@@ -366,10 +521,11 @@ export default function ReportesPage() {
           <Tab label="Productos" />
           <Tab label="Clientes" />
           <Tab label="Inventario" />
+          <Tab label="Por Búsqueda" /> {/* New Tab */}
         </Tabs>
       </Box>
 
-      {error && (
+      {error && tabValue !== 4 && ( // Only show error for main tabs
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
@@ -615,6 +771,253 @@ export default function ReportesPage() {
                 <Typography variant="body2" color="text.secondary">
                   Inventario sin alertas por el momento.
                 </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Box>
+      )}
+
+      {/* New Tab: Por Búsqueda */}
+      {tabValue === 4 && (
+        <Box sx={{ display: 'grid', gap: 3 }}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" fontWeight={600} gutterBottom>
+                Búsqueda de Reportes por Voz, Texto o Filtros.
+              </Typography>
+
+              {/* Text Input */}
+              <Box sx={{ display: 'flex', gap: 1, mt: 2, mb: 2 }}>
+                <TextField
+                  label="Comando de Texto"
+                  variant="outlined"
+                  fullWidth
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearchSubmit(searchText);
+                    }
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={() => handleSearchSubmit(searchText)}
+                  startIcon={<Search/>}
+                  disabled={loadingSearch}
+                >
+                  Buscar
+                </Button>
+              </Box>
+
+              {/* Voice Input Button */}
+              <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<MicNone />}
+                sx={{ mb: 2 }}
+                onClick={handleVoiceCommand}
+                disabled={isListeningVoiceCommand || loadingSearch}
+              >
+                {isListeningVoiceCommand ? 'Escuchando...' : 'Comando de Voz'}
+              </Button>
+
+              {/* Pills Input */}
+              <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                <TextField
+                  label="Añadir Filtro"
+                  variant="outlined"
+                  fullWidth
+                  value={addPillText}
+                  onChange={(e) => setAddPillText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddPill();
+                    }
+                  }}
+                  helperText="Formato: campo:operador:valor (ej. name:contains:camisa, price:gt:50)" // Added helper text
+                  error={!!error && error.includes('Píldora inválido')} // Highlight if pill error
+                />
+                <Button variant="contained" onClick={handleAddPill} disabled={loadingSearch}>
+                  Añadir
+                </Button>
+              </Box>
+
+              {/* Display Pills */}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                {pills.map((pill: any, index: number) => ( // Changed pill type to any
+                  <Chip
+                    key={index}
+                    label={`${pill.field}:${pill.operator}:${pill.value}`} // Display structured pill
+                    onDelete={() => handleRemovePill(pill)}
+                    color="primary"
+                    variant="outlined"
+                  />
+                ))}
+              </Box>
+
+              {/* Clear Button */}
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={handleClearSearch}
+                sx={{ mb: 2 }}
+              >
+                Limpiar Búsqueda
+              </Button>
+              
+              {error && !error.includes('Píldora inválido') && ( // Display general errors
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {error}
+                </Alert>
+              )}
+              {error && error.includes('Píldora inválido') && ( // Display pill-specific error
+                <Alert severity="warning" sx={{ mb: 3 }}>
+                  {error}
+                </Alert>
+              )}
+
+              {loadingSearch ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress size={32} />
+                </Box>
+              ) : (
+                searchReportData && (
+                  <Box>
+                    <Typography variant="subtitle1" gutterBottom>
+                      Resultados para: {voiceCommandText || searchText || pills.join(' AND ')}
+                    </Typography>
+                    {searchReportData.message && (
+                      <Typography color="error">{searchReportData.message}</Typography>
+                    )}
+                    {searchReportData.report_type === 'top_products' && (
+                      <Box>
+                        <Typography variant="h6">Productos Más Vendidos</Typography>
+                        {/* Render table for top products */}
+                        <TableContainer component={Paper}>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Producto</TableCell>
+                                <TableCell align="right">Unidades Vendidas</TableCell>
+                                <TableCell align="right">Monto</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {searchReportData.data.map((item: any, index: number) => (
+                                <TableRow key={index}>
+                                  <TableCell>{item.name}</TableCell>
+                                  <TableCell align="right">{item.units}</TableCell>
+                                  <TableCell align="right">{formatCurrency(item.amount)}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Box>
+                    )}
+                    {searchReportData.report_type === 'top_customers' && (
+                      <Box>
+                        <Typography variant="h6">Clientes Frecuentes</Typography>
+                        {/* Render table for top customers */}
+                        <TableContainer component={Paper}>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Cliente</TableCell>
+                                <TableCell align="right">Teléfono</TableCell>
+                                <TableCell align="right">Órdenes</TableCell>
+                                <TableCell align="right">Monto</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {searchReportData.data.map((item: any, index: number) => (
+                                <TableRow key={index}>
+                                  <TableCell>{item.name}</TableCell>
+                                  <TableCell align="right">{item.phone}</TableCell>
+                                  <TableCell align="right">{item.orders}</TableCell>
+                                  <TableCell align="right">{formatCurrency(item.amount)}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Box>
+                    )}
+                    {searchReportData.report_type === 'products_above_value' && (
+                      <Box>
+                        <Typography variant="h6">Productos con Valor Mayor a</Typography>
+                        {/* Render table for products above value */}
+                        <TableContainer component={Paper}>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Producto</TableCell>
+                                <TableCell align="right">Precio</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {searchReportData.data.map((item: any, index: number) => (
+                                <TableRow key={index}>
+                                  <TableCell>{item.name}</TableCell>
+                                  <TableCell align="right">{formatCurrency(item.price)}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Box>
+                    )}
+                    {searchReportData.report_type === 'products_equal_value' && (
+                      <Box>
+                        <Typography variant="h6">Productos con Valor Igual a</Typography>
+                        {/* Render table for products equal value */}
+                        <TableContainer component={Paper}>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Producto</TableCell>
+                                <TableCell align="right">Precio</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {searchReportData.data.map((item: any, index: number) => (
+                                <TableRow key={index}>
+                                  <TableCell>{item.name}</TableCell>
+                                  <TableCell align="right">{formatCurrency(item.price)}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Box>
+                    )}
+                    {searchReportData.report_type === 'low_stock_products' && (
+                      <Box>
+                        <Typography variant="h6">Productos con Bajo Stock</Typography>
+                        {/* Render table for low stock products */}
+                        <TableContainer component={Paper}>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Producto</TableCell>
+                                <TableCell align="right">Stock</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {searchReportData.data.map((item: any, index: number) => (
+                                <TableRow key={index}>
+                                  <TableCell>{item.name}</TableCell>
+                                  <TableCell align="right">{item.stock}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Box>
+                    )}
+                  </Box>
+                )
               )}
             </CardContent>
           </Card>

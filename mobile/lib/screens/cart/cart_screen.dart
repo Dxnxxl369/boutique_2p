@@ -6,62 +6,55 @@ import '../../widgets/cart_item_card.dart';
 import '../checkout/checkout_screen.dart';
 
 class CartScreen extends StatelessWidget {
-  const CartScreen({super.key});
+  final VoidCallback? onNavigateToProducts;
+
+  const CartScreen({super.key, this.onNavigateToProducts});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Carrito de Compras'),
-      ),
-      body: Consumer<CartProvider>(
-        builder: (context, cart, child) {
-          if (cart.items.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.remove_shopping_cart_outlined, size: 80),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Tu carrito está vacío',
-                    style: theme.textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  FilledButton(
-                    onPressed: () {
-                      // A simple way to go back to the shop is to switch tabs.
-                      // This is not ideal, a better approach would use a TabController.
-                      // For now, this is a placeholder for that logic.
-                      // A more robust solution would be to use a TabController managed
-                      // in MainScreen to programmatically switch tabs.
-                    },
-                    child: const Text('Ir a la Tienda'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(8.0),
-                  itemCount: cart.items.length,
-                  itemBuilder: (context, index) {
-                    final item = cart.items[index];
-                    return CartItemCard(item: item);
-                  },
+    return Consumer<CartProvider>(
+      builder: (context, cart, child) {
+        if (cart.items.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.remove_shopping_cart_outlined, size: 80),
+                const SizedBox(height: 16),
+                Text(
+                  'Tu carrito está vacío',
+                  style: theme.textTheme.headlineSmall,
                 ),
-              ),
-              _buildCartSummary(context, cart),
-            ],
+                const SizedBox(height: 8),
+                FilledButton(
+                  onPressed: () {
+                    onNavigateToProducts?.call();
+                  },
+                  child: const Text('Ir a Productos'),
+                ),
+              ],
+            ),
           );
-        },
-      ),
+        }
+
+        return Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(8.0),
+                itemCount: cart.items.length,
+                itemBuilder: (context, index) {
+                  final item = cart.items[index];
+                  return CartItemCard(item: item);
+                },
+              ),
+            ),
+            _buildCartSummary(context, cart),
+          ],
+        );
+      },
     );
   }
 

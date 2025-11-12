@@ -5,8 +5,17 @@ import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/order_provider.dart';
 
-class CheckoutScreen extends StatelessWidget {
+enum _PaymentMethod { qr, transfer }
+
+class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
+
+  @override
+  State<CheckoutScreen> createState() => _CheckoutScreenState();
+}
+
+class _CheckoutScreenState extends State<CheckoutScreen> {
+  _PaymentMethod? _selectedPaymentMethod;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +48,37 @@ class CheckoutScreen extends StatelessWidget {
                   Text(user?.address ?? 'No address provided'),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Payment Method Selection
+          Text('Método de Pago', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Card(
+            child: Column(
+              children: [
+                RadioListTile<_PaymentMethod>(
+                  title: const Text('QR'),
+                  value: _PaymentMethod.qr,
+                  groupValue: _selectedPaymentMethod,
+                  onChanged: (_PaymentMethod? value) {
+                    setState(() {
+                      _selectedPaymentMethod = value;
+                    });
+                  },
+                ),
+                RadioListTile<_PaymentMethod>(
+                  title: const Text('Transferencia'),
+                  value: _PaymentMethod.transfer,
+                  groupValue: _selectedPaymentMethod,
+                  onChanged: (_PaymentMethod? value) {
+                    setState(() {
+                      _selectedPaymentMethod = value;
+                    });
+                  },
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),
@@ -107,6 +147,16 @@ class CheckoutScreen extends StatelessWidget {
                 onPressed: orderProvider.status == OrderStatus.loading
                     ? null
                     : () async {
+                        if (_selectedPaymentMethod == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Por favor, selecciona un método de pago.')),
+                          );
+                          return;
+                        }
+
+                        // Simulate payment (no actual processing, just proceed)
+                        print('Simulating payment with method: $_selectedPaymentMethod');
+
                         final success = await context.read<OrderProvider>().createOrderFromCart(cart);
                         if (success && context.mounted) {
                           // TODO: Navigate to an OrderConfirmationScreen
@@ -122,7 +172,7 @@ class CheckoutScreen extends StatelessWidget {
                       },
                 child: orderProvider.status == OrderStatus.loading
                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Realizar Pedido'),
+                    : const Text('Pagar'),
               ),
             ),
           ],

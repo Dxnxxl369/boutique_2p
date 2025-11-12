@@ -295,9 +295,8 @@ export default function CategoriasPage() {
         </DialogTitle>
 
         <DialogContent dividers sx={{ p: 3 }}>
-          <Grid container spacing={3}>
-            {/* Nombre de la Categoría */}
-            <Grid item xs={12}>
+          <Grid container spacing={3}>            
+            <Grid>
               <TextField
                 fullWidth
                 label="Nombre de la Categoría"
@@ -311,7 +310,7 @@ export default function CategoriasPage() {
             </Grid>
 
             {/* Descripción */}
-            <Grid item xs={12}>
+            <Grid>
               <TextField
                 fullWidth
                 label="Descripción"
@@ -325,7 +324,7 @@ export default function CategoriasPage() {
             </Grid>
 
             {/* Estado */}
-            <Grid item xs={12}>
+            <Grid>
               <FormControl fullWidth>
                 <InputLabel>Estado</InputLabel>
                 <Select
