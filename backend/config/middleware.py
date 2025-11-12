@@ -25,7 +25,7 @@ class TokenAuthMiddleware:
                 user = await User.objects.aget(id=access_token["user_id"])
                 scope["user"] = user
             except Exception as e:
-                print(f"WebSocket authentication failed: {e}")
+                print(f"WebSocket authentication failed: {type(e).__name__}: {e}")
                 scope["user"] = AnonymousUser()
         else:
             scope["user"] = AnonymousUser()

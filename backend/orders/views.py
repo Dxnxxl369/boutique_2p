@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 
 from django.db.models import Count, Sum, F, Value, DecimalField, ExpressionWrapper
 from django.db.models.functions import Coalesce, TruncDay, TruncMonth
@@ -21,6 +22,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from .serializers import OrderSerializer
+import re
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -507,6 +509,127 @@ class OrderViewSet(viewsets.ModelViewSet):
         response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="reporte_ventas.pdf"'
         return response
+
+    @action(detail=False, methods=["post"], url_path="voice-command")
+    def voice_command(self, request):
+        command_text = request.data.get("command_text", "").lower()
+        print(f"Received voice command: {command_text}") # Added print statement
+        response_data = {"message": "Comando no reconocido o sin resultados."}
+
+        if "productos mas vendidos" in command_text:
+            try: # Added try-except block
+                top_products_qs = (
+                    OrderItem.objects.filter(order__status=Order.Status.COMPLETED)
+                    .values("product__name")
+                    .annotate(
+                        units=Coalesce(Sum("quantity"), 0),
+                        amount=Coalesce(Sum("total_price"), Value(0, output_field=DecimalField())),
+                    )
+                    .order_by("-units")[:5]
+                )
+                top_products = [
+                    {
+                        "name": record["product__name"],
+                        "units": int(record["units"]),
+                        "amount": float(record["amount"]),
+                    }
+                    for record in top_products_qs
+                ]
+                response_data = {"report_type": "top_products", "data": top_products}
+            except Exception as e: # Catch any exception
+                print(f"Error processing 'productos mas vendidos': {e}")
+                response_data = {"message": f"Error al procesar 'productos mas vendidos': {e}"}
+        elif "clientes frecuentes" in command_text:
+            try: # Added try-except block
+                completed_orders = Order.objects.filter(status=Order.Status.COMPLETED)
+                top_customers_qs = (
+                    completed_orders.values("customer_name", "customer_phone")
+                    .annotate(
+                        orders=Count("id"),
+                        amount=Coalesce(Sum("total_amount"), Value(0, output_field=DecimalField())),
+                    )
+                    .order_by("-amount")[:5]
+                )
+                top_customers = [
+                    {
+                        "name": record["customer_name"],
+                        "phone": record["customer_phone"],
+                        "orders": int(record["orders"]),
+                        "amount": str(record["amount"]),
+                    }
+                    for record in top_customers_qs
+                ]
+                response_data = {"report_type": "top_customers", "data": top_customers}
+            except Exception as e: # Catch any exception
+                print(f"Error processing 'clientes frecuentes': {e}")
+                response_data = {"message": f"Error al procesar 'clientes frecuentes': {e}"}
+        elif "productos con valor mayor a" in command_text:
+            try:
+                # Extract the number after "mayor a"
+                value_str = command_text.split("productos con valor mayor a")[-1].strip().split(" ")[0]
+                value_str = value_str.replace(',', '.') # Added: Replace comma with dot
+                value = Decimal(value_str)
+                
+                products_above_value_qs = Product.objects.filter(price__gt=value).values("name", "price")
+                products_above_value = [
+                    {"name": product["name"], "price": float(product["price"])}
+                    for product in products_above_value_qs
+                ]
+                response_data = {"report_type": "products_above_value", "data": products_above_value}
+            except (ValueError, IndexError) as e: # Catch specific exceptions
+                print(f"Error processing 'productos con valor mayor a': {e}")
+                response_data = {"message": f"No se pudo interpretar el valor para 'productos con valor mayor a': {e}"}
+            except Exception as e: # Catch any other exception
+                print(f"Error processing 'productos con valor mayor a': {e}")
+                response_data = {"message": f"Error al procesar 'productos con valor mayor a': {e}"}
+        elif "producto con valor" in command_text or "producto igual al valor" in command_text:
+            try:
+                # Determine the keyword used
+                keyword = ""
+                if "producto con valor igual a" in command_text:
+                    keyword = "producto con valor igual a"
+                elif "producto igual al valor" in command_text:
+                    keyword = "producto igual al valor"
+                elif "producto con valor" in command_text:
+                    keyword = "producto con valor"
+                
+                # Extract the number after the keyword
+                # A more robust way to extract the number
+                match = re.search(r'(\d+([.,]\d+)?)', command_text.split(keyword)[-1])
+                if match:
+                    value_str = match.group(1)
+                else:
+                    raise ValueError("No se encontró un valor numérico en el comando.")
+
+                value_str = value_str.replace(',', '.') # Replace comma with dot
+                print(f"Attempting to convert value_str to Decimal: '{value_str}'") # Added print statement
+                value = Decimal(value_str)
+                
+                products_equal_value_qs = Product.objects.filter(price=value).values("name", "price")
+                products_equal_value = [
+                    {"name": product["name"], "price": float(product["price"])}
+                    for product in products_equal_value_qs
+                ]
+                response_data = {"report_type": "products_equal_value", "data": products_equal_value}
+            except (ValueError, IndexError) as e:
+                print(f"Error processing 'producto con valor X': {e}")
+                response_data = {"message": f"No se pudo interpretar el valor numérico para 'producto con valor X': {e}"}
+            except Exception as e:
+                print(f"Error processing 'producto con valor X': {e}")
+                response_data = {"message": f"Error al procesar 'producto con valor X': {e}"}
+        elif "productos con bajo stock" in command_text:
+            try:
+                low_stock_products_qs = Product.objects.filter(stock__lt=20).values("name", "stock").order_by("stock")
+                low_stock_products = [
+                    {"name": product["name"], "stock": product["stock"]}
+                    for product in low_stock_products_qs
+                ]
+                response_data = {"report_type": "low_stock_products", "data": low_stock_products}
+            except Exception as e:
+                print(f"Error processing 'productos con bajo stock': {e}")
+                response_data = {"message": f"Error al procesar 'productos con bajo stock': {e}"}
+        
+        return Response(response_data)
 
     @action(detail=False, methods=["get"], url_path="reports-excel")
     def reports_excel(self, request):

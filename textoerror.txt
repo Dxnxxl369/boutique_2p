@@ -1,94 +1,18 @@
- 5853
-Internal Server Error: /api/orders/reports-pdf/
-Traceback (most recent call last):
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\asgiref\sync.py", line 552, in thread_handler
-    raise exc_info[1]
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\django\core\handlers\exception.py", line 42, in inner
-    response = await get_response(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\asgiref\sync.py", line 552, in thread_handler
-    raise exc_info[1]
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\django\core\handlers\base.py", line 253, in _get_response_async
-    response = await wrapped_callback(
-               ^^^^^^^^^^^^^^^^^^^^^^^
-        request, *callback_args, **callback_kwargs
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\asgiref\sync.py", line 502, in __call__
-    ret = await asyncio.shield(exec_coro)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\HP\AppData\Local\Programs\Python\Python313\Lib\concurrent\futures\thread.py", line 59, in run
-    result = self.fn(*self.args, **self.kwargs)
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\asgiref\sync.py", line 556, in thread_handler
-    return func(*args, **kwargs)
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
-    return view_func(request, *args, **kwargs)
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
-    return self.dispatch(request, *args, **kwargs)
-           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
-    response = self.handle_exception(exc)
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
-    self.raise_uncaught_exception(exc)
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
-    raise exc
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
-    response = handler(request, *args, **kwargs)
-  File "C:\examen2\boutique\backend\orders\views.py", line 504, in reports_pdf 
-    doc.build(buffer)
-    ~~~~~~~~~^^^^^^^^
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\reportlab\platypus\doctemplate.py", line 1322, in build
-    BaseDocTemplate.build(self,flowables, canvasmaker=canvasmaker)
-    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\reportlab\platypus\doctemplate.py", line 1058, in build
-    flowableCount = len(flowables)
-TypeError: object of type '_io.BytesIO' has no len()
-2025-11-10 22:06:15,903 ERROR    Internal Server Error: /api/orders/reports-pdf/
-Traceback (most recent call last):
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\asgiref\sync.py", line 552, in thread_handler
-    raise exc_info[1]
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\django\core\handlers\exception.py", line 42, in inner
-    response = await get_response(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\asgiref\sync.py", line 552, in thread_handler
-    raise exc_info[1]
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\django\core\handlers\base.py", line 253, in _get_response_async
-    response = await wrapped_callback(
-               ^^^^^^^^^^^^^^^^^^^^^^^
-        request, *callback_args, **callback_kwargs
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    )
-    ^
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\asgiref\sync.py", line 502, in __call__
-    ret = await asyncio.shield(exec_coro)
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\HP\AppData\Local\Programs\Python\Python313\Lib\concurrent\futures\thread.py", line 59, in run
-    result = self.fn(*self.args, **self.kwargs)
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\asgiref\sync.py", line 556, in thread_handler
-    return func(*args, **kwargs)
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\django\views\decorators\csrf.py", line 65, in _view_wrapper
-    return view_func(request, *args, **kwargs)
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\rest_framework\viewsets.py", line 125, in view
-    return self.dispatch(request, *args, **kwargs)
-           ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\rest_framework\views.py", line 515, in dispatch
-    response = self.handle_exception(exc)
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\rest_framework\views.py", line 475, in handle_exception
-    self.raise_uncaught_exception(exc)
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\rest_framework\views.py", line 486, in raise_uncaught_exception
-    raise exc
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\rest_framework\views.py", line 512, in dispatch
-    response = handler(request, *args, **kwargs)
-  File "C:\examen2\boutique\backend\orders\views.py", line 504, in reports_pdf 
-    doc.build(buffer)
-    ~~~~~~~~~^^^^^^^^
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\reportlab\platypus\doctemplate.py", line 1322, in build
-    BaseDocTemplate.build(self,flowables, canvasmaker=canvasmaker)
-    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\examen2\boutique\backend\venv\Lib\site-packages\reportlab\platypus\doctemplate.py", line 1058, in build
-    flowableCount = len(flowables)
-TypeError: object of type '_io.BytesIO' has no len()
-127.0.0.1:63822 - - [10/Nov/2025:22:06:15] "GET /api/orders/reports-pdf/" 500 116151
+(venv) PS C:\examen2\boutique\backend>  daphne -b 0.0.0.0 -p 8000 config.asgi:application
+Firebase Admin SDK initialized successfully.
+2025-11-12 03:01:44,961 INFO     Starting server at tcp:port=8000:interface=0.0.0.0
+2025-11-12 03:01:44,962 INFO     HTTP/2 support not enabled (install the http2 and tls Twisted extras)
+2025-11-12 03:01:44,963 INFO     Configuring endpoint tcp:port=8000:interface=0.0.0.0
+2025-11-12 03:01:44,963 INFO     Listening on TCP address 0.0.0.0:8000
+127.0.0.1:54776 - - [12/Nov/2025:03:01:46] "OPTIONS /api/auth/me/" 200 -
+127.0.0.1:54776 - - [12/Nov/2025:03:01:47] "GET /api/auth/me/" 200 345
+127.0.0.1:54776 - - [12/Nov/2025:03:01:48] "OPTIONS /api/orders/dashboard-summary/" 200 -
+127.0.0.1:54776 - - [12/Nov/2025:03:01:48] "GET /api/orders/dashboard-summary/" 200 389
+127.0.0.1:62418 - - [12/Nov/2025:03:01:48] "WSCONNECTING /ws/notifications/" - -
+127.0.0.1:62418 - - [12/Nov/2025:03:01:48] "WSCONNECT /ws/notifications/" - -
+Received voice command: productos más vendidos.
+127.0.0.1:51700 - - [12/Nov/2025:03:02:08] "POST /api/orders/voice-command/" 200 53
+Received voice command: productos con esta bajo.
+127.0.0.1:60562 - - [12/Nov/2025:03:02:28] "POST /api/orders/voice-command/" 200 53
+Received voice command: productos con stock bajo.
+127.0.0.1:55139 - - [12/Nov/2025:03:03:23] "POST /api/orders/voice-command/" 200 53

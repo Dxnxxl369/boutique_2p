@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -10,12 +10,14 @@ import {
   Button,
   Alert,
   CircularProgress,
+  Dialog, DialogTitle, DialogContent, DialogActions, List, ListItem, ListItemText
 } from '@mui/material';
 import {
   ShoppingBag,
   People,
   Inventory,
   Assessment,
+  MicNone
 } from '@mui/icons-material';
 import {
   LineChart,
@@ -36,38 +38,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import AdminLayout from '@/components/AdminLayout';
 import api from '@/lib/axios';
 
-interface DashboardStats {
-  total_products: number;
-  total_customers: number;
-  today_sales: number;
-  month_sales: number;
-}
-
-interface WeeklySalesRecord {
-  day: string;
-  date: string;
-  total: number;
-}
-
-interface CategorySalesRecord {
-  name: string;
-  units: number;
-  amount: number;
-}
-
-interface TopProductRecord {
-  name: string;
-  units: number;
-  amount: number;
-}
-
-interface StatCard {
-  title: string;
-  value: string;
-  icon: ReactNode;
-  color: string;
-}
-
 const DASHBOARD_CATEGORY_COLORS = ['#FF6B9D', '#C44569', '#A55EEA', '#26C6DA', '#FFA726'];
 
 export default function DashboardPage() {
@@ -79,6 +49,11 @@ export default function DashboardPage() {
   const [topProducts, setTopProducts] = useState<TopProductRecord[]>([]);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [isListening, setIsListening] = useState(false);
+  const [voiceCommandText, setVoiceCommandText] = useState('');
+  const [voiceReportData, setVoiceReportData] = useState<any>(null);
+  const [showVoiceReportDialog, setShowVoiceReportDialog] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -116,6 +91,58 @@ export default function DashboardPage() {
       currency: 'COP',
       minimumFractionDigits: 0,
     });
+
+  const handleVoiceCommand = useCallback(() => {
+    if (!('webkitSpeechRecognition' in window)) {
+      alert('Tu navegador no soporta el reconocimiento de voz. Por favor, usa Chrome.');
+      return;
+    }
+
+    const SpeechRecognition = (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.lang = 'es-ES'; // Set language to Spanish
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceCommandText('');
+      setVoiceReportData(null);
+      setShowVoiceReportDialog(false);
+      console.log('Reconocimiento de voz iniciado...');
+    };
+
+    recognition.onresult = async (event: SpeechRecognitionEvent) => {
+      const transcript = event.results[0][0].transcript;
+      setVoiceCommandText(transcript);
+      console.log('Comando de voz detectado:', transcript);
+
+      try {
+        const response = await api.post('/orders/voice-command/', { command_text: transcript });
+        setVoiceReportData(response.data);
+        setShowVoiceReportDialog(true);
+      } catch (error) {
+        console.error('Error al enviar comando de voz al backend:', error);
+        setVoiceReportData({ message: 'Error al procesar el comando de voz.' });
+        setShowVoiceReportDialog(true);
+      }
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      console.log('Reconocimiento de voz finalizado.');
+    };
+
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      setIsListening(false);
+      console.error('Error en el reconocimiento de voz:', event.error);
+      setVoiceReportData({ message: `Error en el reconocimiento de voz: ${event.error}` });
+      setShowVoiceReportDialog(true);
+    };
+
+    recognition.start();
+  }, []);
 
   const statCards: StatCard[] = [
     {
@@ -429,9 +456,95 @@ export default function DashboardPage() {
             >
               Reportes
             </Button>
+            <Button
+              variant="contained" // Changed to contained for prominence
+              fullWidth
+              startIcon={<MicNone />}
+              sx={{ py: 1.5, borderRadius: 2 }}
+              onClick={handleVoiceCommand}
+              disabled={isListening}
+            >
+              {isListening ? 'Escuchando...' : 'Comando de Voz'}
+            </Button>
           </Box>
         </CardContent>
       </Card>
+
+      {/* Voice Report Dialog */}
+      <Dialog open={showVoiceReportDialog} onClose={() => setShowVoiceReportDialog(false)}>
+        <DialogTitle>Resultado del Comando de Voz</DialogTitle>
+        <DialogContent>
+          <Typography variant="subtitle1" gutterBottom>
+            Comando: {voiceCommandText}
+          </Typography>
+          {voiceReportData && voiceReportData.message && (
+            <Typography color="error">{voiceReportData.message}</Typography>
+          )}
+          {voiceReportData && voiceReportData.report_type === 'top_products' && (
+            <Box>
+              <Typography variant="h6">Productos Más Vendidos</Typography>
+              <List>
+                {voiceReportData.data.map((item: any, index: number) => (
+                  <ListItem key={index}>
+                    <ListItemText primary={`${item.name} (${item.units} unidades)`} secondary={`Monto: ${formatCurrency(item.amount)}`} />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
+          {voiceReportData && voiceReportData.report_type === 'top_customers' && (
+            <Box>
+              <Typography variant="h6">Clientes Frecuentes</Typography>
+              <List>
+                {voiceReportData.data.map((item: any, index: number) => (
+                  <ListItem key={index}>
+                    <ListItemText primary={`${item.name} (${item.orders} órdenes)`} secondary={`Teléfono: ${item.phone}, Monto: ${formatCurrency(item.amount)}`} />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
+          {voiceReportData && voiceReportData.report_type === 'products_above_value' && (
+            <Box>
+              <Typography variant="h6">Productos con Valor Mayor a</Typography>
+              <List>
+                {voiceReportData.data.map((item: any, index: number) => (
+                  <ListItem key={index}>
+                    <ListItemText primary={`${item.name}`} secondary={`Precio: ${formatCurrency(item.price)}`} />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
+          {voiceReportData && voiceReportData.report_type === 'products_equal_value' && (
+            <Box>
+              <Typography variant="h6">Productos con Valor Igual a</Typography>
+              <List>
+                {voiceReportData.data.map((item: any, index: number) => (
+                  <ListItem key={index}>
+                    <ListItemText primary={`${item.name}`} secondary={`Precio: ${formatCurrency(item.price)}`} />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
+          {voiceReportData && voiceReportData.report_type === 'low_stock_products' && ( // Added this block
+            <Box>
+              <Typography variant="h6">Productos con Bajo Stock</Typography>
+              <List>
+                {voiceReportData.data.map((item: any, index: number) => (
+                  <ListItem key={index}>
+                    <ListItemText primary={`${item.name}`} secondary={`Stock: ${item.stock}`} />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowVoiceReportDialog(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
     </AdminLayout>
   );
 }

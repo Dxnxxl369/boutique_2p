@@ -35,8 +35,19 @@ class LocalNotificationService {
     final AndroidNotification? android = message.notification?.android;
 
     if (notification != null && android != null) {
+      // Extract data from the message payload
+      final String? orderId = message.data['order_id'];
+      final String? newStatus = message.data['new_status'];
+
+      int notificationId = notification.hashCode; // Fallback
+      if (orderId != null && newStatus != null) {
+        // Create a unique ID based on orderId and newStatus
+        // Using a simple hash for newStatus, could be more robust if needed
+        notificationId = int.parse(orderId) * 1000 + newStatus.hashCode;
+      }
+
       _notificationsPlugin.show(
-        notification.hashCode,
+        notificationId, // Use the unique ID
         notification.title,
         notification.body,
         NotificationDetails(
